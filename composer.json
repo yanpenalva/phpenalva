@@ -1,37 +1,37 @@
 {
-  "name": "hiyan/phpenalva",
-  "description": "PHPenalva is a micro php framework for building web applications and simple APIs.",
-  "license": "MIT",
-  "type": "project",
-  "authors": [
-    {
-      "name": "Yan Brasiliano Silva Penalva",
-      "email": "yanpenabr@gmail.com"
+    "name": "yanpenalva/phpenalva",
+    "description": "PHPenalva is a micro php framework for building web applications and simple APIs.",
+    "license": "MIT",
+    "type": "project",
+    "authors": [
+        {
+            "name": "Yan Brasiliano Silva Penalva",
+            "email": "yanpenabr@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "Core\\": "core/",
+            "Exceptions\\": "core/Exceptions/",
+            "Helpers\\": "core/Helpers/",
+            "Middlewares\\": "core/Middlewares/",
+            "Controllers\\": "app/Controllers/",
+            "Models\\": "app/Models/",
+            "Views\\": "app/Views/",
+            "Routes\\": "routes/",
+            "Bootstrap\\": "bootstrap/",
+            "Database\\": "database/"
+        }
+    },
+    "require": {
+        "php": ">=8.0.0",
+        "vlucas/phpdotenv": "^5.5"
+    },
+    "scripts": {
+        "start": "docker compose -f .docker/docker-compose.yaml up -d",
+        "stop": "docker compose -f .docker/docker-compose.yaml down",
+        "restart": "docker compose -f .docker/docker-compose.yaml restart",
+        "migrate": "php config/migrate.php"
     }
-  ],
-  "autoload": {
-    "psr-4": {
-      "App\\": "app/",
-      "Core\\": "core/",
-      "Exceptions\\": "core/Exceptions/",
-      "Helpers\\": "core/Helpers/",
-      "Middlewares\\": "core/Middlewares/",
-      "Controllers\\": "app/Controllers/",
-      "Models\\": "app/Models/",
-      "Views\\": "app/Views/",
-      "Routes\\": "routes/",
-      "Bootstrap\\": "bootstrap/",
-      "Database\\": "database/"
-    }
-  },
-  "require": {
-    "php": ">=8.0.0",
-    "vlucas/phpdotenv": "^5.5"
-  },
-  "scripts": {
-    "start": "docker compose -f .docker/docker-compose.yaml up -d",
-    "stop": "docker compose -f .docker/docker-compose.yaml down",
-    "restart": "docker compose -f .docker/docker-compose.yaml restart",
-    "migrate": "php config/migrate.php"
-  }
 }
