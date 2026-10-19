@@ -1,113 +1,121 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Core;
 
-/**
- * Abstract class for controllers in the application.
- */
+use Exception;
+use stdClass;
+use function file_exists;
+use function http_response_code;
+use function sprintf;
+
 abstract class BaseController
 {
-  protected $viewPath;
-  protected $layoutPath;
-  protected $view;
-  protected $pageTitle;
+    protected string $viewPath = '';
+    protected string $layoutPath = '';
 
-  public function __construct()
-  {
-    $this->view = new \stdClass();
-    $this->pageTitle = '';
-  }
+    /** @var object */
+    protected $view;
 
-  protected function getViewPath($viewName)
-  {
-    $possibleExtensions = ['.phtml', '.html'];
+    protected string $pageTitle = '';
 
-    foreach ($possibleExtensions as $extension) {
-      $filePath = __DIR__ . '/../app/Views/' . $viewName . $extension;
-      if (file_exists($filePath)) {
-        return $filePath;
-      }
+    public function __construct()
+    {
+        $this->view = new stdClass();
+        $this->pageTitle = '';
     }
 
-    return __DIR__ . '/../app/Views/' . $viewName . '.phtml';
-  }
+    protected function getViewPath(string $viewName): string
+    {
+        foreach (['.phtml', '.html'] as $extension) {
+            $filePath = sprintf('%s/../app/Views/%s%s', __DIR__, $viewName, $extension);
 
-  protected function renderView($viewName, $layoutName = null)
-  {
-    $this->viewPath = $this->getViewPath($viewName);
-    $this->layoutPath = $this->getViewPath($layoutName);
+            if (file_exists($filePath)) {
+                return $filePath;
+            }
+        }
 
-    if ($layoutName) {
-      return $this->getLayout();
+        return sprintf('%s/../app/Views/%s.phtml', __DIR__, $viewName);
     }
 
-    return $this->getContent();
-  }
+    protected function renderView(string $viewName, ?string $layoutName = null): void
+    {
+        $this->viewPath = $this->getViewPath($viewName);
+        $this->layoutPath = $this->getViewPath((string) $layoutName);
 
+        if ($layoutName !== null && $layoutName !== '') {
+            $this->getLayout();
 
-  protected function getLayout()
-  {
-    $file = $this->layoutPath;
+            return;
+        }
 
-    if (file_exists($file)) {
-      return require_once $file;
+        $this->getContent();
     }
 
-    $this->renderExceptionView(404, 'Layout path not found.');
-  }
+    protected function getLayout(): void
+    {
+        if (file_exists($this->layoutPath)) {
+            require_once $this->layoutPath;
 
-  protected function getContent()
-  {
-    $file = $this->viewPath;
+            return;
+        }
 
-    if (file_exists($file)) {
-      return require_once $file;
+        $this->renderExceptionView(404, 'Layout path not found.');
     }
 
-    $this->renderExceptionView(404, 'View path not found.');
-  }
+    protected function getContent(): void
+    {
+        if (file_exists($this->viewPath)) {
+            require_once $this->viewPath;
 
-  protected function renderExceptionView($statusCode, $message)
-  {
-    $errorDetails = [
-      'message' => $message,
-      'status_code' => $statusCode,
-    ];
+            return;
+        }
 
-    $exceptionPath = $this->getViewPath('/System/exception');
-    if (file_exists($exceptionPath)) {
-      return require_once $exceptionPath;
+        $this->renderExceptionView(404, 'View path not found.');
     }
 
-    throw new \Exception('Exception view not found.', 500);
-  }
+    protected function renderExceptionView(int $statusCode, string $message): void
+    {
+        http_response_code($statusCode);
+        $errorDetails = [
+            'message' => $message,
+            'status_code' => $statusCode,
+        ];
 
-  protected function setPageTitle($pageTitle)
-  {
-    $this->pageTitle = $pageTitle;
-  }
-  protected function getPageTitle($separator = null)
-  {
-    if ($separator && !empty($this->pageTitle)) {
-      return $this->pageTitle . ' ' . $separator . ' ';
+        $exceptionPath = $this->getViewPath('/System/exception');
+
+        if (file_exists($exceptionPath)) {
+            require_once $exceptionPath;
+
+            return;
+        }
+
+        throw new Exception('Exception view not found.', 500);
     }
 
-    return $this->pageTitle;
-  }
+    protected function setPageTitle(string $pageTitle): void
+    {
+        $this->pageTitle = $pageTitle;
+    }
 
+    protected function getPageTitle(?string $separator = null): string
+    {
+        if ($separator !== null && $separator !== '' && $this->pageTitle !== '') {
+            return sprintf('%s %s ', $this->pageTitle, $separator);
+        }
 
-  /**
-   * Handle forbidden requests by returning an array with an error message.
-   *
-   * @param string $message Optional custom message for the forbidden response.
-   * @return array Response array containing the error message and status code.
-   */
-  public function forbidden($message = 'Unauthorized')
-  {
+        return $this->pageTitle;
+    }
 
-    return [
-      'error' => $message,
-      'status' => 403
-    ];
-  }
+    /**
+     * Handle forbidden requests by returning an array with an error message.
+     */
+    public function forbidden(string $message = 'Unauthorized'): array
+    {
+        return [
+            'error' => $message,
+            'status' => 403,
+        ];
+    }
 }
