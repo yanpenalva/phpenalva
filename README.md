@@ -1,145 +1,203 @@
+# PHPenalva
 
-# PHPenalva 𓅓
-![logomarca](public/assets/images/logomarca.png)
+PHPenalva is a PHP application framework organized around HTTP entry points, bounded contexts, and PDO persistence.
 
-### Overview
-PHPenalva is a lightweight PHP micro-framework designed on the Model-View-Controller (MVC) architecture.<br>
-Built with simplicity in mind, PHPenalva empowers you to swiftly create APIs and web applications.<br>
+## Table of Contents
 
-**Note**: This project is currently under construction. Please bear with us as we work to make it even better.
+1. [Architecture Overview](#architecture-overview)
+2. [Installation](#installation)
+3. [Key Features](#key-features)
+4. [Technology Stack](#technology-stack)
+5. [Project Structure](#project-structure)
+6. [Usage Recipes](#usage-recipes)
+7. [Testing](#testing)
+8. [Best Practices](#best-practices)
+9. [Commit Conventions](#commit-conventions)
+10. [Code Standards](#code-standards)
+11. [Documentation](#documentation)
 
-### Requirements
-- **PHP Version**: PHP 8.0 or higher is required.
-- **Web Server**: You'll need a web server with URL rewriting enabled.
-- **Supported Servers**: PHPenalva plays nicely with Apache, Nginx, and IIS.
-- **Database Compatibility**: PHPenalva is compatible with MySQL, MariaDB, PostgreSQL, and SQLite.
-- **Platform**: PHPenalva can be used on Linux, Windows, and macOS.
+## Architecture Overview
 
-### Documentação e arquitetura
+`App\Identity` owns user registration, deletion, and session authentication. `App\Content` owns posts. `Core` contains framework-level HTTP, database, session, and migration facilities; it does not depend on application contexts.
 
-Consulte [`docs/`](docs/): instalação, arquitetura em contextos Identity e Content e receitas executáveis. O legado `App\\Models`, `App\\Repositories` e as fachadas `App\\Services` foi removido dos caminhos da aplicação; `Core\\BaseModel` continua disponível como infraestrutura legada opcional. O limitador de login compartilha tentativas entre processos na mesma máquina via arquivos; multi-máquina requer store compartilhado (Redis é uma evolução futura).
+![Layered architecture](docs/assets/layered-architecture.svg)
 
-### Installation
-Getting started with PHPenalva is a breeze. <br>
-You can install it via Composer with the following command in your project directory:<br>
-`composer create-project hiyan/phpenalva your_project_name`
+![HTTP request pipeline](docs/assets/request-pipeline.svg)
 
-### Development Environment
+```mermaid
+flowchart LR
+    Client --> Routes
+    Routes --> Guard[Request guard and auth check]
+    Guard --> UseCase[Application use case]
+    UseCase --> Repository[Domain repository contract]
+    Repository --> Adapter[PDO repository adapter]
+    Adapter --> Database[(Database)]
+    UseCase --> Response[HTTP response]
+```
 
-PHPenalva comes with a pre-configured development environment using Docker, which simplifies the setup and execution of the microframework without the need to install servers and dependencies directly on your machine.
+```mermaid
+flowchart TB
+    Core[Framework Core]
+    Identity[Identity context]
+    Content[Content context]
+    Identity --> Core
+    Content --> Core
+    Identity -. public identifiers and contracts .- Content
+```
 
-#### How to Use the Development Environment
+`bootstrap/dependencies.php` creates adapters and use cases. `bootstrap/Routes.php` resolves route declarations to controllers and dependencies. Controllers handle HTTP input/output and delegate writes to application use cases.
 
-1. **Starting the Environment**: You can start the development environment with the following command. This will launch the necessary Docker containers to run PHPenalva:
-   ```bash
+## Installation
+
+1. Clone the repository and enter the project directory:
+
+   ```sh
+   git clone https://github.com/yanpenalva/phpenalva.git
+   cd phpenalva
+   ```
+
+2. Install PHP dependencies and create the environment file:
+
+   ```sh
+   composer install
+   cp .env.example .env
+   ```
+
+3. Select a PDO driver in `.env`. SQLite is the default; `DB_DATABASE` can point to a SQLite file. MySQL, PostgreSQL, and SQL Server have declared driver-specific migration DDL. Install the matching PDO extension and set `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` for server databases.
+
+4. Start the Docker Compose development environment when Docker is available:
+
+   ```sh
    composer start
    ```
-   
-   This command runs `docker compose up -d`, starting the containers with a web server and database ready for use.
 
-2. **Environment Structure**: All Docker environment configurations are located in the `.docker` directory. In this directory, you'll find configuration files like `Dockerfile` and `nginx.conf`, which define how the environment is built and how services (PHP, NGINX, etc.) are configured.
+   The web server is exposed at `http://localhost:8081`. Stop the containers with `composer stop`.
 
-3. **Customization**: If you need to adjust the development environment (e.g., change NGINX settings or add PHP extensions), you can edit the files within the `.docker` directory to customize the environment as needed.
+5. Apply registered migrations:
 
-4. **Stopping the Environment**: To stop the development environment, use the following command:
-   ```bash
-   composer stop
+   ```sh
+   composer migrate
    ```
-   This command runs `docker compose down`, shutting down the running containers.
 
-With this setup, you can focus on developing with PHPenalva without worrying about complex local configurations. Simply run `composer start` to begin and `composer stop` to halt the environment as needed.
+   The migration command defaults to `up`. Destructive rollback commands require `--force`; see [Installation and migrations](docs/01-installation.md#migrations).
 
-These commands make it easy to manage the environment, allowing you to work directly on the project with convenience! 🚀
+## Key Features
 
-### Migrations
+- Identity and Content bounded contexts with Domain, Application, and Infrastructure layers.
+- Session-cookie authentication, CSRF protection, and account/IP keyed login throttling.
+- PDO repositories with explicit database-row mapping.
+- Registered, dependency-ordered schema migrations with `up`, `down`, and latest-only `rollback` operations.
+- JSON response envelope: `{status, message, data, errors}`.
+- PHPUnit feature and unit suites.
 
-PHPenalva includes a simple migration system that allows you to define and manage your database schema. The migration system is managed through classes and a custom Composer command, making it easy to create tables, modify columns, and keep track of changes over time.
+## Technology Stack
 
-#### How it Works
+| Area | Technology |
+|---|---|
+| Runtime | PHP 8.0+ |
+| Dependencies | Composer, `vlucas/phpdotenv` |
+| Persistence | PDO; SQLite, MySQL, PostgreSQL, and SQL Server driver declarations |
+| HTTP development environment | Docker Compose, PHP and Nginx |
+| Tests | PHPUnit 9.6+ |
+| Static analysis | PHPStan 1.12+ |
 
-1. **Migration Classes**: Each migration is a PHP class stored in the `database/migrations` directory. These classes extend the base class `BaseMigration` and define two methods: `up()` (to apply the migration) and `down()` (to reverse it).
-   
-2. **Migration Manager**: The `MigrationManager` class, located in `core`, runs migrations explicitly registered in its migration list and logs applied migrations in a special table.
+SQLite is exercised by the automated HTTP, repository, and migration tests. Other drivers have per-driver DDL in the migration classes and are declared supported by configuration and migration code.
 
-3. **Custom Composer Command**: We’ve added a `composer migrate` command to simplify the execution of migrations. New migration classes must be explicitly registered in `core/MigrationManager.php`; files in `database/migrations` are not discovered automatically.
+## Project Structure
 
-#### Running Migrations
-
-To apply all pending migrations, simply run:
-
-```bash
-composer migrate
+```text
+app/Identity/       Identity domain, use cases, and persistence adapters
+app/Content/        Content domain, use cases, and persistence adapters
+app/Controllers/    HTTP controllers
+app/Middleware/     Request and CSRF guards
+bootstrap/          Dependency factories and route dispatch
+config/             Database and migration command configuration
+core/               Framework services, database, and migration manager
+database/migrations Registered schema migrations
+docs/               Installation, architecture, recipes, and module references
+routes/             HTTP route declarations
+tests/              Feature and unit tests
 ```
 
-This command will create a `migrations` table in the database (if it doesn’t already exist) to keep track of which migrations have been applied. Then, it will execute each registered migration's `up()` method that hasn't been applied yet.
+## Usage Recipes
 
-#### Creating a New Migration
+The commands below run from the repository root.
 
-1. Create a new file in `database/migrations`, with a name that reflects the purpose of the migration (e.g., `CreateUsersTable.php`).
-   
-2. Define a class with the same name as the file and extend `Core\BaseMigration`.
+### Create a bounded context
 
-Example of a migration to create a `users` table:
-
-```php
-<?php
-
-use Core\BaseMigration;
-
-class CreateUsersTable extends BaseMigration
-{
-    public function up()
-    {
-        $this->execute("CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name VARCHAR(100),
-            email VARCHAR(100) UNIQUE,
-            password VARCHAR(255),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )");
-    }
-
-    public function down()
-    {
-        $this->execute("DROP TABLE IF EXISTS users");
-    }
-}
+```sh
+mkdir -p app/Billing/{Domain,Application,Infrastructure/Persistence}
 ```
 
-#### Customizing the Migrations
+Add domain types and repository contracts under `app/Billing/Domain/`, use cases under `app/Billing/Application/`, and PDO adapters under `app/Billing/Infrastructure/Persistence/`. Register factories in `bootstrap/dependencies.php`. Keep the domain independent of `Core`, controllers, sessions, and PDO.
 
-You can customize your migrations by editing the individual migration classes in `database/migrations`. Each class can contain any SQL statements needed to modify the schema as required. To apply specific changes, modify the `up()` method, and to undo those changes, modify the `down()` method.
+### Add a use case
 
-The migration system is flexible, allowing you to manage changes to the database schema over time, ensuring consistency across environments.
+Create `app/Content/Application/ArchivePost.php`, declare `strict_types=1`, inject the `PostRepository` contract, and expose the operation through `execute(...)`. Add focused tests under `tests/Unit/Content/ContentTest.php`, register a factory in `bootstrap/dependencies.php`, and update `docs/modules/content.md`.
 
----
+### Add a value object
 
-This section provides a straightforward way to manage your database schema changes with migrations, making it easy to apply and roll back changes using the `composer migrate` command.
+Create `app/Content/Domain/PostTitle.php`. Validate and normalize input in the constructor and expose it through a typed method. Add valid, invalid, and boundary cases to `tests/Unit/Content/ContentTest.php`.
 
-### Drivers de banco
+### Expose an endpoint
 
-- SQLite is the primary driver and is used for local migrations and functional tests. It requires `pdo_sqlite`.
-- MySQL and PostgreSQL migrations require local verification with `pdo_mysql` and `pdo_pgsql`.
-- SQL Server é experimental e requer `PDO_SQLSRV`; os testes automatizados não comprovam esse driver.
-- Any `DB_CONNECTION` outside `sqlite`, `mysql`, `pgsql`, and `sqlsrv` is rejected during configuration.
-- Schema rollback requires explicit `--force`; it drops schema objects and cannot recover deleted data, so arrange a separate backup.
+1. Add the HTTP action to `app/Controllers/PostController.php`; guard and validate the request and delegate writes to a use case.
+2. Declare the method and path in `routes/routes.php`.
+3. Add required factories in `bootstrap/dependencies.php` and add the controller dependency mapping in `bootstrap/Routes.php`.
+4. Verify the response contract in `tests/Feature/HttpContractTest.php`.
+5. Update `docs/modules/content.md` with the endpoint and behavior.
 
-### Testes
+HTTP mutations require the session CSRF token. Fetch it from `GET /csrf-token`, retain the session cookie, then send `X-CSRF-Token` with the mutation. Authentication uses session cookies; the API does not use Bearer tokens.
 
-Execute localmente (requer dependências instaladas):
+## Testing
 
-```bash
-composer validate
-composer lint
+Run the project checks from the repository root:
+
+```sh
 composer test
+composer lint
 composer analyse
 ```
 
-`composer test` executa PHPUnit. Testes de adapters usam SQLite temporário/em memória; não usam `database/database.sqlite`.
+- `composer test` runs PHPUnit. `tests/Unit/Identity/IdentityTest.php` and `tests/Unit/Content/ContentTest.php` cover context rules and persistence behavior.
+- `tests/Feature/HttpContractTest.php` exercises the HTTP server, session/CSRF flow, JSON envelope, registration, authentication, and post operations using temporary SQLite databases.
+- `tests/Feature/MigrationManagerTest.php` checks SQLite migration and rollback behavior; it also checks declared MySQL, PostgreSQL, and SQL Server DDL through a recording PDO double.
+- `composer lint` runs `php -l` on the configured PHP file list.
+- `composer analyse` runs PHPStan with `phpstan.neon`.
 
-### Migração
+## Best Practices
 
-As entidades e casos de uso ficam em `app/<Contexto>/{Domain,Application,Infrastructure}`. Controllers chamam casos de uso. A autenticação do framework recebe `CredentialLookup`; não conhece models de aplicação.
+- Keep domain code independent from HTTP, framework core, and persistence details.
+- Use application use cases for state-changing behavior and repository contracts for persistence.
+- Keep controllers focused on HTTP parsing, guards, response codes, and delegation.
+- Bind SQL parameters and map rows explicitly in infrastructure adapters.
+- Preserve the response envelope and meaningful status codes; successful `DELETE` responses may use `204` with no body.
+- Use a shared storage service if login-attempt state must span machines. The configured file store is local to a machine and uses file locking for cooperating local processes.
+- Review schema changes and take a separate backup before destructive rollback.
 
-Authentication uses session cookies, not Bearer tokens. Obtain a token from `GET /csrf-token`, retain the session cookie, and send `X-CSRF-Token` on mutations (including registration and login). Send credentials and post descriptions in the form or JSON body; PUT also accepts URL-encoded bodies. JSON responses use `{status,message,data,errors}`; successful DELETE returns 204 without a body.
+## Commit Conventions
+
+Use Conventional Commit types with a concise imperative description:
+
+```text
+<type>: <description>
+```
+
+Common types: `feat`, `fix`, `docs`, `refactor`, `test`, `perf`, `build`, `ci`, `ops`, `chore`, `revert`.
+
+## Code Standards
+
+- Start PHP files with `declare(strict_types=1);` and use explicit types.
+- Prefer guard clauses and linear control flow; do not add `else`/`elseif` branches.
+- Keep files below 500 lines, methods below 150 lines, and methods to at most 15 declarations; target methods under 30 lines.
+- Keep methods to at most 3 returns, 7 parameters, cyclomatic complexity 10, and cognitive complexity 15.
+- Keep controllers thin, use cases focused, and SQL in persistence adapters.
+- Add focused tests for behavior changes; the strict-code target is at least 80% coverage for new code.
+
+## Documentation
+
+- [Installation and migrations](docs/01-installation.md)
+- [Architecture](docs/02-architecture.md)
+- [Recipes](docs/03-recipes.md)
+- [Identity module](docs/modules/identity.md)
+- [Content module](docs/modules/content.md)
