@@ -8,7 +8,6 @@ use App\Identity\Domain\Email;
 use App\Identity\Domain\EmailAlreadyUsed;
 use App\Identity\Domain\User;
 use App\Identity\Domain\UserRepository;
-use App\Services\UserValidationException;
 use Core\BaseValidator;
 use RuntimeException;
 use function is_string;

@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Middleware\RequestGuard;
-use App\Services\UserService;
-use App\Services\UserValidationException;
+use App\Identity\Application\RegisterUser;
+use App\Identity\Application\DeleteUser;
+use App\Identity\Application\UserValidationException;
 use App\Traits\RestResponseTrait;
 use Core\BaseController;
 use Core\BaseValidator;
-use PDOException;
+use Throwable;
 use function http_response_code;
 
 /**
@@ -30,7 +31,7 @@ final class UserController extends BaseController
 
     private ?PDO $pdo = null;
 
-    public function __construct(private UserService $users)
+    public function __construct(private RegisterUser $registerUser, private DeleteUser $deleteUser)
     {
         parent::__construct();
         $this->guard = new RequestGuard();
@@ -78,12 +79,12 @@ final class UserController extends BaseController
     private function createUser(array $payload): void
     {
         try {
-            $user = $this->users->register($payload);
+            $user = $this->registerUser->execute($payload);
         } catch (UserValidationException $exception) {
             $this->errorResponse('Validation failed', 422, $exception->errors());
 
             return;
-        } catch (PDOException $exception) {
+        } catch (Throwable $exception) {
             $this->errorResponse('Unable to create the user.', 500);
 
             return;
@@ -95,8 +96,8 @@ final class UserController extends BaseController
     private function removeUser(int $identifier): void
     {
         try {
-            $deleted = $this->users->delete($identifier);
-        } catch (PDOException $exception) {
+            $deleted = $this->deleteUser->execute($identifier);
+        } catch (Throwable $exception) {
             $this->errorResponse('Unable to delete the user.', 500);
 
             return;

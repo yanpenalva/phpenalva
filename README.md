@@ -15,6 +15,10 @@ Built with simplicity in mind, PHPenalva empowers you to swiftly create APIs and
 - **Database Compatibility**: PHPenalva is compatible with MySQL, MariaDB, PostgreSQL, and SQLite.
 - **Platform**: PHPenalva can be used on Linux, Windows, and macOS.
 
+### Documentação e arquitetura
+
+Consulte [`docs/`](docs/): instalação, arquitetura em contextos Identity e Content e receitas executáveis. O legado `App\\Models`, `App\\Repositories` e as fachadas `App\\Services` foi removido dos caminhos da aplicação; `Core\\BaseModel` continua disponível como infraestrutura legada opcional. O limitador de login mantém estado na memória do processo; em deployments com múltiplos workers/processos, cada processo possui contagem independente. Não há store compartilhado configurado.
+
 ### Installation
 Getting started with PHPenalva is a breeze. <br>
 You can install it via Composer with the following command in your project directory:<br>
@@ -113,17 +117,17 @@ The migration system is flexible, allowing you to manage changes to the database
 
 This section provides a straightforward way to manage your database schema changes with migrations, making it easy to apply and roll back changes using the `composer migrate` command.
 
-### Supported Database Drivers
+### Drivers de banco
 
 - SQLite is the primary driver and is used for local migrations and functional tests. It requires `pdo_sqlite`.
 - MySQL and PostgreSQL migrations require local verification with `pdo_mysql` and `pdo_pgsql`.
-- SQL Server migrations are experimental, require `PDO_SQLSRV`, and are not included in CI.
+- SQL Server é experimental e requer `PDO_SQLSRV`; os testes automatizados não comprovam esse driver.
 - Any `DB_CONNECTION` outside `sqlite`, `mysql`, `pgsql`, and `sqlsrv` is rejected during configuration.
 - Schema rollback requires explicit `--force`; it drops schema objects and cannot recover deleted data, so arrange a separate backup.
 
-### Tests and CI Gates
+### Testes
 
-Run the local checks with:
+Execute localmente (requer dependências instaladas):
 
 ```bash
 composer validate
@@ -132,6 +136,10 @@ composer test
 composer analyse
 ```
 
-Checks run locally for this landing; automatic push/PR workflow triggers are disabled. The retained manual workflow defines PHP 8.0–8.3 gates and MySQL/PostgreSQL checks, but is not evidence that those environments passed.
+`composer test` executa PHPUnit. Testes de adapters usam SQLite temporário/em memória; não usam `database/database.sqlite`.
+
+### Migração
+
+As entidades e casos de uso ficam em `app/<Contexto>/{Domain,Application,Infrastructure}`. Controllers chamam casos de uso. A autenticação do framework recebe `CredentialLookup`; não conhece models de aplicação.
 
 Authentication uses session cookies, not Bearer tokens. Obtain a token from `GET /csrf-token`, retain the session cookie, and send `X-CSRF-Token` on mutations (including registration and login). Send credentials and post descriptions in the form or JSON body; PUT also accepts URL-encoded bodies. JSON responses use `{status,message,data,errors}`; successful DELETE returns 204 without a body.

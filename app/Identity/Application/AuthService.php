@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Identity\Application;
 
-use App\Services\AuthRateLimiter;
-use App\Identity\Infrastructure\Persistence\PdoUserRepository;
+use App\Identity\Application\AuthRateLimiter;
+use Core\CredentialLookup;
 use Core\BaseAuthenticate;
 use Core\BaseSession;
 use function bin2hex;
@@ -34,7 +34,7 @@ final class AuthService
     private AuthRateLimiter $limiter;
 
     public function __construct(
-        private PdoUserRepository $users,
+        private CredentialLookup $users,
         private BaseAuthenticate $authenticate,
     ) {
         $this->limiter = new AuthRateLimiter();

@@ -17,7 +17,6 @@
             "Helpers\\": "core/Helpers/",
             "Middlewares\\": "core/Middlewares/",
             "Controllers\\": "app/Controllers/",
-            "Models\\": "app/Models/",
             "Views\\": "app/Views/",
             "Routes\\": "routes/",
             "Bootstrap\\": "bootstrap/",

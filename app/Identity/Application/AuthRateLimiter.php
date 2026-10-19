@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Identity\Application;
 
 use function array_filter;
 use function array_values;

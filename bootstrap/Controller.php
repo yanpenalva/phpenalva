@@ -7,6 +7,7 @@ namespace Bootstrap;
 use Core\BaseDatabase;
 use Exception;
 use function class_exists;
+use function is_array;
 use function file_exists;
 use function header;
 use function headers_sent;
@@ -32,7 +33,7 @@ class Controller
             throw new Exception(sprintf('Controller not found: %s', $controllerClass));
         }
 
-        return $dependency !== null ? new $controllerClass($dependency) : new $controllerClass();
+        return $dependency !== null ? new $controllerClass(...(is_array($dependency) ? $dependency : [$dependency])) : new $controllerClass();
     }
 
     public function getModel(string $model): object

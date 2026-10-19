@@ -8,11 +8,12 @@ use App\Identity\Domain\Email;
 use App\Identity\Domain\EmailAlreadyUsed;
 use App\Identity\Domain\User;
 use App\Identity\Domain\UserRepository;
+use Core\CredentialLookup;
 use PDO;
 use PDOException;
 use function is_array;
 
-final class PdoUserRepository implements UserRepository
+final class PdoUserRepository implements UserRepository, CredentialLookup
 {
     public function __construct(private PDO $pdo)
     {
@@ -71,7 +72,7 @@ final class PdoUserRepository implements UserRepository
     }
 
     /** @return array<string, mixed>|null */
-    public function findPublicById(int $id): ?array
+    public function findById(int $id): ?array
     {
         $statement = $this->pdo->prepare('SELECT id, name, email FROM users WHERE id = :id LIMIT 1');
         $statement->execute(['id' => $id]);

@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Middleware\RequestGuard;
-use App\Services\PostService;
+use App\Content\Application\CreatePost;
+use App\Content\Application\UpdatePost;
+use App\Content\Application\DeletePost;
+use App\Content\Domain\PostRepository;
 use App\Traits\RestResponseTrait;
 use Core\BaseController;
 use Core\BaseRequest;
 use Core\Logger;
+use InvalidArgumentException;
 use Error;
 use Throwable;
 use TypeError;
@@ -21,12 +25,12 @@ class PostController extends BaseController
 {
     use RestResponseTrait;
 
-    private PostService $posts;
+    private PostRepository $posts;
 
     /** @var object */
     public $view;
 
-    public function __construct(PostService $posts)
+    public function __construct(PostRepository $posts, private CreatePost $create, private UpdatePost $update, private DeletePost $delete)
     {
         parent::__construct();
         $this->posts = $posts;
@@ -36,7 +40,7 @@ class PostController extends BaseController
     {
         try {
             $this->setPageTitle('Posts');
-            $this->view->posts = $this->posts->listPosts();
+            $this->view->posts = $this->posts->all();
             $this->renderView('Posts/index');
         } catch (Throwable $exception) {
             $this->logError('index', $exception);
@@ -49,7 +53,7 @@ class PostController extends BaseController
         try {
             $this->setPageTitle('Post Details');
             $postId = $this->parseId($id);
-            $this->view->post = $postId === null ? null : $this->posts->findPost($postId);
+            $this->view->post = $postId === null ? null : $this->posts->find($postId);
             $this->renderView('Posts/show');
         } catch (Throwable $exception) {
             $this->logError('show', $exception);
@@ -134,15 +138,8 @@ class PostController extends BaseController
             return;
         }
 
-        $errors = $this->posts->validatePost(['description' => $description]);
-
-        if ($errors !== []) {
-            $this->errorResponse('Validation failed', 422, $errors);
-
-            return;
-        }
-
-        $postId = $this->posts->createPost(['description' => $description]);
+        try { $postId = $this->create->execute($description); }
+        catch (InvalidArgumentException $exception) { $this->errorResponse('Validation failed', 422, ['description' => [$exception->getMessage()]]); return; }
         $this->successResponse(['message' => 'Post created successfully', 'id' => $postId], 201);
     }
 
@@ -156,7 +153,7 @@ class PostController extends BaseController
             return;
         }
 
-        if (!$this->posts->postExists($postId)) {
+        if ($this->posts->find($postId) === null) {
             $this->notFoundResponse('Post');
 
             return;
@@ -175,15 +172,8 @@ class PostController extends BaseController
             return;
         }
 
-        $errors = $this->posts->validatePost(['description' => $description]);
-
-        if ($errors !== []) {
-            $this->errorResponse('Validation failed', 422, $errors);
-
-            return;
-        }
-
-        $this->posts->updatePost($postId, ['description' => $description]);
+        try { $this->update->execute($postId, $description); }
+        catch (InvalidArgumentException $exception) { $this->errorResponse('Validation failed', 422, ['description' => [$exception->getMessage()]]); return; }
         $this->successResponse(['message' => 'Post updated successfully'], 200);
     }
 
@@ -197,13 +187,13 @@ class PostController extends BaseController
             return;
         }
 
-        if (!$this->posts->postExists($postId)) {
+        if ($this->posts->find($postId) === null) {
             $this->notFoundResponse('Post');
 
             return;
         }
 
-        $this->posts->deletePost($postId);
+        $this->delete->execute($postId);
         $this->successResponse([], 204);
     }
 
