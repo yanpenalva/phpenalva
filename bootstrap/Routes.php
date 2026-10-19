@@ -12,6 +12,8 @@ use function array_reduce;
 use function count;
 use function explode;
 use function is_string;
+use function is_array;
+use function array_map;
 use function parse_url;
 use function str_contains;
 
@@ -100,12 +102,13 @@ class Routes
             }
 
             $factory = match ((string) $route['controller']) {
-                'PostController' => __NAMESPACE__ . '\\postService',
-                'UserController' => __NAMESPACE__ . '\\userService',
+                'PostController' => [__NAMESPACE__ . '\\postRepository', __NAMESPACE__ . '\\createPost', __NAMESPACE__ . '\\updatePost', __NAMESPACE__ . '\\deletePost'],
+                'UserController' => [__NAMESPACE__ . '\\registerUser', __NAMESPACE__ . '\\deleteUser'],
                 'AuthController' => __NAMESPACE__ . '\\authService',
                 default => null,
             };
-            $controller = Controller::createController((string) $route['controller'], $factory === null ? null : $factory());
+            $dependencies = is_array($factory) ? array_map(static fn (string $dependency): mixed => $dependency(), $factory) : ($factory === null ? null : $factory());
+            $controller = Controller::createController((string) $route['controller'], $dependencies);
 
             if ($route['auth'] && !$this->isAuthenticated()) {
                 $controller->forbidden();

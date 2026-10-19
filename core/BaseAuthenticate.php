@@ -5,16 +5,13 @@ declare(strict_types=1);
 namespace Core;
 
 use App\Middleware\CsrfMiddleware;
-use App\Models\User;
 use App\Traits\RestResponseTrait;
 use RuntimeException;
 use function base64_encode;
 use function ctype_digit;
-use function get_object_vars;
 use function hash_hmac;
 use function is_array;
 use function is_int;
-use function is_object;
 use function is_string;
 use function json_encode;
 use function password_verify;
@@ -42,7 +39,7 @@ final class BaseAuthenticate
 
     private CsrfMiddleware $csrf;
 
-    public function __construct(private User $user)
+    public function __construct(private CredentialLookup $users)
     {
         $this->csrf = new CsrfMiddleware();
     }
@@ -106,19 +103,15 @@ final class BaseAuthenticate
      */
     private function findUser(int $id): ?array
     {
-        $row = $this->user->getById($id);
+        $row = $this->users->findById($id);
 
         if (is_array($row)) {
             return $row;
         }
 
-        if (!is_object($row)) {
-            $this->errorResponse('Unauthorized', 401);
+        $this->errorResponse('Unauthorized', 401);
 
-            return null;
-        }
-
-        return get_object_vars($row);
+        return null;
     }
 
     private function secretKey(): string

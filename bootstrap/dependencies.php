@@ -12,33 +12,32 @@ use App\Content\Application\DeletePost;
 use App\Content\Application\UpdatePost;
 use App\Content\Infrastructure\Persistence\PdoPostRepository;
 use App\Identity\Infrastructure\Persistence\PdoUserRepository;
-use App\Services\PostService;
-use App\Services\UserService;
-use App\Models\User;
 use Core\BaseAuthenticate;
 use Core\BaseDatabase;
 
-function userService(): UserService
+function userRepository(): PdoUserRepository
 {
-    $repository = new PdoUserRepository((new BaseDatabase())->getDatabase());
-
-    return new UserService(new RegisterUser($repository), new DeleteUser($repository), $repository);
+    return new PdoUserRepository((new BaseDatabase())->getDatabase());
 }
 
-function postService(): PostService
+function postRepository(): PdoPostRepository
 {
-    $repository = new PdoPostRepository((new BaseDatabase())->getDatabase());
-    return new PostService($repository, new CreatePost($repository), new UpdatePost($repository), new DeletePost($repository));
+    return new PdoPostRepository((new BaseDatabase())->getDatabase());
 }
 
 function authService(): AuthService
 {
-    $pdo = (new BaseDatabase())->getDatabase();
-    return new AuthService(new PdoUserRepository($pdo), new BaseAuthenticate(new User($pdo)));
+    $users = userRepository();
+    return new AuthService($users, new BaseAuthenticate($users));
 }
 
 function authenticate(): bool
 {
-    $pdo = (new BaseDatabase())->getDatabase();
-    return (new BaseAuthenticate(new User($pdo)))->check() !== null;
+    return (new BaseAuthenticate(userRepository()))->check() !== null;
 }
+
+function registerUser(): RegisterUser { return new RegisterUser(userRepository()); }
+function deleteUser(): DeleteUser { return new DeleteUser(userRepository()); }
+function createPost(): CreatePost { return new CreatePost(postRepository()); }
+function updatePost(): UpdatePost { return new UpdatePost(postRepository()); }
+function deletePost(): DeletePost { return new DeletePost(postRepository()); }
