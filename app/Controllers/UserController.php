@@ -5,15 +5,11 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Middleware\RequestGuard;
-use App\Models\User;
-use App\Repositories\UserRepository;
 use App\Services\UserService;
 use App\Services\UserValidationException;
 use App\Traits\RestResponseTrait;
 use Core\BaseController;
-use Core\BaseDatabase;
 use Core\BaseValidator;
-use PDO;
 use PDOException;
 use function http_response_code;
 
@@ -30,20 +26,13 @@ final class UserController extends BaseController
 
     private const IDENTIFIER_RULES = ['id' => 'required|integer|min:1'];
 
-    private BaseDatabase $connection;
-
     private RequestGuard $guard;
-
-    private ?UserRepository $repository = null;
-
-    private ?UserService $service = null;
 
     private ?PDO $pdo = null;
 
-    public function __construct()
+    public function __construct(private UserService $users)
     {
         parent::__construct();
-        $this->connection = new BaseDatabase();
         $this->guard = new RequestGuard();
     }
 
@@ -89,7 +78,7 @@ final class UserController extends BaseController
     private function createUser(array $payload): void
     {
         try {
-            $user = $this->service()->register($payload);
+            $user = $this->users->register($payload);
         } catch (UserValidationException $exception) {
             $this->errorResponse('Validation failed', 422, $exception->errors());
 
@@ -106,7 +95,7 @@ final class UserController extends BaseController
     private function removeUser(int $identifier): void
     {
         try {
-            $deleted = $this->repository()->deleteById($identifier);
+            $deleted = $this->users->delete($identifier);
         } catch (PDOException $exception) {
             $this->errorResponse('Unable to delete the user.', 500);
 
@@ -135,30 +124,4 @@ final class UserController extends BaseController
         return (int) $identifier;
     }
 
-    private function service(): UserService
-    {
-        if ($this->service === null) {
-            $this->service = new UserService($this->repository(), new User($this->pdo()));
-        }
-
-        return $this->service;
-    }
-
-    private function repository(): UserRepository
-    {
-        if ($this->repository === null) {
-            $this->repository = new UserRepository($this->pdo());
-        }
-
-        return $this->repository;
-    }
-
-    private function pdo(): PDO
-    {
-        if ($this->pdo === null) {
-            $this->pdo = $this->connection->getDatabase();
-        }
-
-        return $this->pdo;
-    }
 }

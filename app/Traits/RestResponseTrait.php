@@ -62,7 +62,7 @@ trait RestResponseTrait
 
     private function resolveStatus(int $status): int
     {
-        if (in_array($status, [200, 201, 204, 400, 401, 403, 404, 422, 500], true)) {
+        if (in_array($status, [200, 201, 204, 400, 401, 403, 404, 422, 429, 500], true)) {
             return $status;
         }
 

@@ -9,7 +9,7 @@ Built with simplicity in mind, PHPenalva empowers you to swiftly create APIs and
 **Note**: This project is currently under construction. Please bear with us as we work to make it even better.
 
 ### Requirements
-- **PHP Version**: PHP 7.4 or higher is required.
+- **PHP Version**: PHP 8.0 or higher is required.
 - **Web Server**: You'll need a web server with URL rewriting enabled.
 - **Supported Servers**: PHPenalva plays nicely with Apache, Nginx, and IIS.
 - **Database Compatibility**: PHPenalva is compatible with MySQL, MariaDB, PostgreSQL, and SQLite.
@@ -55,9 +55,9 @@ PHPenalva includes a simple migration system that allows you to define and manag
 
 1. **Migration Classes**: Each migration is a PHP class stored in the `database/migrations` directory. These classes extend the base class `BaseMigration` and define two methods: `up()` (to apply the migration) and `down()` (to reverse it).
    
-2. **Migration Manager**: The `MigrationManager` class, located in `core`, handles the execution of migrations. It checks for all migration files, applies any new migrations that haven't been executed yet, and logs them in a special table to keep track.
+2. **Migration Manager**: The `MigrationManager` class, located in `core`, runs migrations explicitly registered in its migration list and logs applied migrations in a special table.
 
-3. **Custom Composer Command**: We’ve added a `composer migrate` command to simplify the execution of migrations. This command looks for all new migrations in the `database/migrations` directory and applies them.
+3. **Custom Composer Command**: We’ve added a `composer migrate` command to simplify the execution of migrations. New migration classes must be explicitly registered in `core/MigrationManager.php`; files in `database/migrations` are not discovered automatically.
 
 #### Running Migrations
 
@@ -67,7 +67,7 @@ To apply all pending migrations, simply run:
 composer migrate
 ```
 
-This command will create a `migrations` table in the database (if it doesn’t already exist) to keep track of which migrations have been applied. Then, it will execute each migration's `up()` method that hasn't been applied yet.
+This command will create a `migrations` table in the database (if it doesn’t already exist) to keep track of which migrations have been applied. Then, it will execute each registered migration's `up()` method that hasn't been applied yet.
 
 #### Creating a New Migration
 
