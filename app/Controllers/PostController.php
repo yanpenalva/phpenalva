@@ -41,7 +41,7 @@ class PostController extends BaseController
         try {
             $this->setPageTitle('Posts');
             $this->view->posts = $this->posts->all();
-            $this->renderView('Posts/index');
+            $this->renderView('Posts/index', '/System/layout');
         } catch (Throwable $exception) {
             $this->logError('index', $exception);
             $this->renderExceptionView(500, 'Internal Server Error');
@@ -54,7 +54,7 @@ class PostController extends BaseController
             $this->setPageTitle('Post Details');
             $postId = $this->parseId($id);
             $this->view->post = $postId === null ? null : $this->posts->find($postId);
-            $this->renderView('Posts/show');
+            $this->renderView('Posts/show', '/System/layout');
         } catch (Throwable $exception) {
             $this->logError('show', $exception);
             $this->renderExceptionView(500, 'Internal Server Error');

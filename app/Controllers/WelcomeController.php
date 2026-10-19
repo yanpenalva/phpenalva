@@ -19,13 +19,13 @@ class WelcomeController extends BaseController
     public function index(): void
     {
         $this->setPageTitle('Home');
-        $this->renderView('/System/layout');
+        $this->renderView('/Home/index', '/System/layout');
     }
 
     public function contact(): void
     {
         $this->setPageTitle('Contact');
-        $this->renderView('/Home/contact');
+        $this->renderView('/Home/contact', '/System/layout');
     }
 
     public function apiIndex(): void
