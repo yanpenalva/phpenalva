@@ -20,9 +20,9 @@ final class IdentityTest extends TestCase
     public function testEmailNormalizesAndEnforcesHundredCharacterLimit(): void
     {
         self::assertSame('a@example.com', (new Email(' A@EXAMPLE.COM '))->value());
-        self::assertSame(100, strlen((new Email(str_repeat('a', 88) . '@example.com'))->value()));
+        self::assertSame(100, strlen((new Email(str_repeat('a', 64) . '@' . str_repeat('b', 31) . '.com'))->value()));
         $this->expectException(InvalidArgumentException::class);
-        new Email(str_repeat('a', 89) . '@example.com');
+        new Email(str_repeat('a', 64) . '@' . str_repeat('b', 32) . '.com');
     }
 
     public function testEmailRejectsMalformedAddress(): void
