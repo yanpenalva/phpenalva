@@ -50,7 +50,11 @@ final class RegisterUser
             throw new RuntimeException('Password hashing failed.');
         }
 
-        $user = $this->users->add(User::register(trim((string) $input['name']), $email, $hash));
+        try {
+            $user = $this->users->add(User::register(trim((string) $input['name']), $email, $hash));
+        } catch (EmailAlreadyUsed $exception) {
+            throw new UserValidationException(['email' => ['The email has already been taken.']]);
+        }
         $id = $user->id();
 
         if ($id === null) {

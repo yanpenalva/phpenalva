@@ -83,6 +83,13 @@ final class PdoUserRepository implements UserRepository
 
     private function isEmailConflict(PDOException $exception): bool
     {
-        return $exception->getCode() === '23000' || (int) ($exception->errorInfo[1] ?? 0) === 19;
+        $info = $exception->errorInfo ?? [];
+        $message = (string) ($info[2] ?? $exception->getMessage());
+
+        if (($info[1] ?? 0) === 1062 || $exception->getCode() === '23505') {
+            return true;
+        }
+
+        return str_contains($message, 'UNIQUE constraint failed') && str_contains($message, 'users.email');
     }
 }
