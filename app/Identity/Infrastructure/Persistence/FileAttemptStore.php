@@ -7,20 +7,27 @@ namespace App\Identity\Infrastructure\Persistence;
 use App\Identity\Domain\AttemptStore;
 use RuntimeException;
 use Throwable;
+use function array_filter;
+use function array_values;
+use function bin2hex;
+use function fclose;
 use function file_get_contents;
 use function file_put_contents;
+use function flock;
+use function fopen;
+use function hash;
+use function is_array;
 use function is_dir;
+use function is_file;
 use function json_decode;
 use function json_encode;
 use function mkdir;
 use function random_bytes;
-use function bin2hex;
 use function rename;
 use function sprintf;
 use function sys_get_temp_dir;
 use function time;
 use function unlink;
-use function hash;
 
 final class FileAttemptStore implements AttemptStore
 {
@@ -54,7 +61,7 @@ final class FileAttemptStore implements AttemptStore
             $path = $this->directory . '/' . hash('sha256', $key) . '.json';
             $lock = fopen($path . '.lock', 'c');
             if ($lock === false || !flock($lock, LOCK_EX)) { return []; }
-            $raw = file_get_contents($path);
+            $raw = is_file($path) ? file_get_contents($path) : false;
             $decoded = $raw === false ? [] : json_decode($raw, true);
             $items = is_array($decoded) ? array_values(array_filter($decoded, 'is_int')) : [];
             $items = $change($items);

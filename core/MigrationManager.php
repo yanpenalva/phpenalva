@@ -151,12 +151,6 @@ final class MigrationManager
             throw new RuntimeException('Unsupported PDO driver for migrations.');
         }
 
-        $requiresSqlServerExtension = $driverName === 'sqlsrv' && !extension_loaded('pdo_sqlsrv');
-
-        if ($requiresSqlServerExtension) {
-            throw new RuntimeException('SQL Server migrations require the PDO_SQLSRV extension.');
-        }
-
         return $driverName;
     }
 
