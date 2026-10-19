@@ -7,6 +7,8 @@ namespace Bootstrap;
 use App\Identity\Application\DeleteUser;
 use App\Identity\Application\RegisterUser;
 use App\Identity\Application\AuthService;
+use App\Identity\Application\AuthRateLimiter;
+use App\Identity\Infrastructure\Persistence\FileAttemptStore;
 use App\Content\Application\CreatePost;
 use App\Content\Application\DeletePost;
 use App\Content\Application\UpdatePost;
@@ -28,7 +30,7 @@ function postRepository(): PdoPostRepository
 function authService(): AuthService
 {
     $users = userRepository();
-    return new AuthService($users, new BaseAuthenticate($users));
+    return new AuthService($users, new BaseAuthenticate($users), new AuthRateLimiter(new FileAttemptStore()));
 }
 
 function authenticate(): bool

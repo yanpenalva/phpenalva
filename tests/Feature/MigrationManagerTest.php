@@ -54,6 +54,23 @@ final class MigrationManagerTest extends TestCase
         $this->manager->rollback();
     }
 
+    public function testDriverDdlContainsExpectedConstraintsWithoutLiveDatabase(): void
+    {
+        foreach ([
+            'mysql' => ['ON DELETE SET NULL', 'email VARCHAR(100) NULL UNIQUE'],
+            'pgsql' => ['ON DELETE SET NULL', 'email VARCHAR(100) NULL UNIQUE'],
+            'sqlsrv' => ['ON DELETE SET NULL', 'email NVARCHAR(100) NULL UNIQUE'],
+        ] as $driver => $expected) {
+            $pdo = new MigrationRecordingPdo($driver);
+            new MigrationManager($pdo);
+            (new \CreateUsersTable($pdo))->up();
+            (new \CreatePostsTable($pdo))->up();
+            self::assertStringContainsString('email', $pdo->sql[1]);
+            self::assertStringContainsString($expected[1], $pdo->sql[1]);
+            self::assertStringContainsString($expected[0], $pdo->sql[2]);
+        }
+    }
+
     private function tableExists(string $tableName): bool
     {
         $statement = $this->pdo->prepare('SELECT COUNT(*) FROM sqlite_master WHERE type = :type AND name = :name');
@@ -61,5 +78,24 @@ final class MigrationManagerTest extends TestCase
         $tableCount = $statement->fetchColumn();
 
         return (int) $tableCount === 1;
+    }
+}
+
+final class MigrationRecordingPdo extends PDO
+{
+    /** @var list<string> */
+    public array $sql = [];
+
+    public function __construct(private string $driver) {}
+
+    public function getAttribute(int $attribute): mixed
+    {
+        return $this->driver;
+    }
+
+    public function exec(string $statement): int|false
+    {
+        $this->sql[] = $statement;
+        return 0;
     }
 }
