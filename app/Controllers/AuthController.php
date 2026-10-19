@@ -112,7 +112,7 @@ final class AuthController extends BaseController
         $errors = BaseValidator::make($body, self::CREDENTIAL_RULES);
 
         if ($errors !== []) {
-            $this->errorResponse('Validation failed', 422, ['errors' => $errors]);
+            $this->errorResponse('Validation failed', 422, $errors);
 
             return null;
         }

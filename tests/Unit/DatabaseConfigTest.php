@@ -43,7 +43,7 @@ final class DatabaseConfigTest extends TestCase
         $_ENV['DB_CONNECTION'] = 'sqlsrv';
 
         try {
-            $this->expectException(\\InvalidArgumentException::class);
+            $this->expectException(\InvalidArgumentException::class);
             $this->expectExceptionMessage('SQL Server is experimental and requires the PDO_SQLSRV extension.');
             require sprintf('%s/config/database.php', dirname(__DIR__, 2));
         } finally {

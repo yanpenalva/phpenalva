@@ -91,7 +91,7 @@ final class UserController extends BaseController
         try {
             $user = $this->service()->register($payload);
         } catch (UserValidationException $exception) {
-            $this->errorResponse('Validation failed', 422, ['errors' => $exception->errors()]);
+            $this->errorResponse('Validation failed', 422, $exception->errors());
 
             return;
         } catch (PDOException $exception) {
@@ -127,7 +127,7 @@ final class UserController extends BaseController
         $errors = BaseValidator::make(['id' => $identifier], self::IDENTIFIER_RULES);
 
         if ($errors !== []) {
-            $this->errorResponse('Validation failed', 422, ['errors' => $errors]);
+            $this->errorResponse('Validation failed', 422, $errors);
 
             return null;
         }

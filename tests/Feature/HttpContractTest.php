@@ -12,17 +12,20 @@ use function dirname;
 use function fclose;
 use function fopen;
 use function getenv;
+use function glob;
 use function is_array;
 use function is_file;
 use function json_decode;
 use function json_encode;
 use function ltrim;
 use function microtime;
+use function mkdir;
 use function preg_match;
 use function proc_close;
 use function proc_get_status;
 use function proc_open;
 use function proc_terminate;
+use function rmdir;
 use function sprintf;
 use function stream_context_create;
 use function stream_get_contents;
@@ -44,6 +47,8 @@ final class HttpContractTest extends TestCase
 
     private string $databasePath = '';
 
+    private string $sessionPath = '';
+
     private int $serverPort;
 
     /** @var resource|null */
@@ -53,6 +58,10 @@ final class HttpContractTest extends TestCase
     private array $serverPipes = [];
 
     private PDO $database;
+
+    private string $cookie = '';
+
+    private string $csrfToken = '';
 
     protected function setUp(): void
     {
@@ -65,10 +74,14 @@ final class HttpContractTest extends TestCase
         }
 
         $this->databasePath = $databasePath;
+        $this->sessionPath = sprintf('%s-sessions', $databasePath);
+        mkdir($this->sessionPath, 0700);
         $this->database = new PDO(sprintf('sqlite:%s', $this->databasePath));
         $this->database->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         (new MigrationManager($this->database))->migrate();
         $this->startServer();
+        $payload = $this->decodeResponse($this->request('GET', '/csrf-token'));
+        $this->csrfToken = $payload['data']['token'];
     }
 
     protected function tearDown(): void
@@ -88,6 +101,12 @@ final class HttpContractTest extends TestCase
         if ($databaseExists) {
             unlink($this->databasePath);
         }
+
+        foreach (glob(sprintf('%s/*', $this->sessionPath)) ?: [] as $sessionFile) {
+            unlink($sessionFile);
+        }
+
+        rmdir($this->sessionPath);
 
         parent::tearDown();
     }
@@ -120,7 +139,10 @@ final class HttpContractTest extends TestCase
 
         self::assertSame(401, $response['status']);
         $payload = $this->decodeResponse($response);
-        self::assertSame('Unauthorized', $payload['data']['error'] ?? null);
+        self::assertSame('error', $payload['status']);
+        self::assertSame('Unauthorized', $payload['message']);
+        self::assertNull($payload['data']);
+        self::assertSame([], $payload['errors']);
     }
 
     public function testRegistrationRejectsAnEmptyPassword(): void
@@ -136,6 +158,7 @@ final class HttpContractTest extends TestCase
         self::assertSame('error', $payload['status']);
         self::assertIsArray($payload['errors']);
         self::assertNotEmpty($payload['errors']);
+        self::assertArrayHasKey('password', $payload['errors']);
     }
 
     public function testRegistrationReadsJsonFromThePostBody(): void
@@ -175,6 +198,53 @@ final class HttpContractTest extends TestCase
         self::assertSame('error', $this->decodeResponse($response)['status']);
     }
 
+    public function testPostsReadJsonPostAndPutBodies(): void
+    {
+        $this->login();
+        $response = $this->request('POST', '/api/posts', ['description' => 'Created through JSON']);
+        self::assertSame(201, $response['status']);
+        $postId = $this->decodeResponse($response)['data']['id'];
+        $response = $this->request('PUT', sprintf('/api/post/%s', $postId), ['description' => 'Updated through JSON']);
+        self::assertSame(200, $response['status']);
+        self::assertSame('Updated through JSON', $this->database->query('SELECT description FROM posts')->fetchColumn());
+        $response = $this->request('DELETE', sprintf('/api/post/%s', $postId));
+        self::assertSame(204, $response['status']);
+        self::assertSame('', $response['body']);
+    }
+
+    public function testPostsRejectMalformedJsonWithoutWriting(): void
+    {
+        $this->login();
+        $response = $this->request('POST', '/api/posts', [], '{"description":');
+        self::assertSame(422, $response['status']);
+        self::assertSame('Malformed JSON body.', $this->decodeResponse($response)['message']);
+        self::assertSame(0, (int) $this->database->query('SELECT COUNT(*) FROM posts')->fetchColumn());
+    }
+
+    public function testAuthenticatedPostsRequireCsrf(): void
+    {
+        $this->login();
+        $this->csrfToken = '';
+        $response = $this->request('POST', '/api/posts', ['description' => 'Must not be created']);
+        self::assertSame(403, $response['status']);
+        self::assertSame(0, (int) $this->database->query('SELECT COUNT(*) FROM posts')->fetchColumn());
+    }
+
+    public function testPostsRejectArrayDescriptions(): void
+    {
+        $this->login();
+        $response = $this->request('POST', '/api/posts', [], '{"description":[]}');
+        self::assertSame(422, $response['status']);
+        self::assertSame('error', $this->decodeResponse($response)['status']);
+    }
+
+    private function login(): void
+    {
+        $credentials = ['name' => 'Post Author', 'email' => 'author@example.test', 'password' => 'valid-password'];
+        self::assertSame(201, $this->request('POST', '/user/create', $credentials)['status']);
+        self::assertSame(200, $this->request('POST', '/login', $credentials)['status']);
+    }
+
     private function startServer(): void
     {
         $socket = stream_socket_server('tcp://127.0.0.1:0', $errorCode, $errorMessage);
@@ -206,7 +276,7 @@ final class HttpContractTest extends TestCase
         $environment['DB_PASSWORD'] = '';
         $routerPath = sprintf('%s/tests/Feature/HttpTestRouter.php', $this->projectRoot);
         $publicPath = sprintf('%s/public', $this->projectRoot);
-        $command = [PHP_BINARY, '-d', 'display_errors=0', '-S', sprintf('127.0.0.1:%d', $this->serverPort), '-t', $publicPath, $routerPath];
+        $command = [PHP_BINARY, '-d', 'display_errors=0', '-d', sprintf('session.save_path=%s', $this->sessionPath), '-S', sprintf('127.0.0.1:%d', $this->serverPort), '-t', $publicPath, $routerPath];
         $descriptors = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
         $process = proc_open($command, $descriptors, $pipes, $this->projectRoot, $environment);
 
@@ -259,14 +329,22 @@ final class HttpContractTest extends TestCase
      * @param array<string, string> $payload
      * @return array{status: int, body: string}
      */
-    private function request(string $method, string $path, array $payload = []): array
+    private function request(string $method, string $path, array $payload = [], ?string $rawBody = null): array
     {
         $requestBody = '';
         $requestHeaders = "Accept: application/json\r\n";
 
+        if ($this->cookie !== '') {
+            $requestHeaders .= sprintf("Cookie: %s\r\n", $this->cookie);
+        }
+
+        if ($this->csrfToken !== '') {
+            $requestHeaders .= sprintf("X-CSRF-Token: %s\r\n", $this->csrfToken);
+        }
+
         if ($method !== 'GET') {
             $encodedBody = json_encode($payload, JSON_THROW_ON_ERROR);
-            $requestBody = $encodedBody;
+            $requestBody = $rawBody ?? $encodedBody;
             $requestHeaders = sprintf("Content-Type: application/json\r\n%s", $requestHeaders);
         }
 
@@ -311,6 +389,12 @@ final class HttpContractTest extends TestCase
         }
 
         /** @var array<int, string> $responseHeaders */
+        foreach ($responseHeaders as $header) {
+            if (preg_match('/^Set-Cookie: ([^;]+)/i', $header, $cookieMatch) === 1) {
+                $this->cookie = $cookieMatch[1];
+            }
+        }
+
         $statusLine = $responseHeaders[0] ?? '';
         $matchedStatus = preg_match('/\s([0-9]{3})\s/', $statusLine, $matches);
 

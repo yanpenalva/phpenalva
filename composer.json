@@ -37,6 +37,11 @@
         "lint": "php -l config/database.php && php -l config/migrate.php && php -l core/BaseMigration.php && php -l core/MigrationManager.php && php -l core/Logger.php && php -l database/migrations/CreateUsersTable.php && php -l database/migrations/CreatePostsTable.php && php -l tests/Feature/HttpTestRouter.php && php -l tests/Feature/HttpContractTest.php && php -l tests/Feature/MigrationManagerTest.php && php -l tests/Unit/DatabaseConfigTest.php && php -l tests/Unit/LoggerTest.php",
         "analyse": "phpstan analyse --configuration=phpstan.neon --no-progress"
     },
+    "config": {
+        "platform": {
+            "php": "8.0.0"
+        }
+    },
     "require-dev": {
         "phpunit/phpunit": "^9.6",
         "phpstan/phpstan": "^1.12"

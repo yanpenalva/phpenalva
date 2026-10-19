@@ -4,20 +4,19 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Middleware\RequestGuard;
 use App\Repositories\PostRepository;
 use App\Services\PostService;
 use App\Traits\RestResponseTrait;
 use Core\BaseController;
 use Core\BaseDatabase;
+use Core\BaseRequest;
+use Core\Logger;
 use Error;
 use Throwable;
 use TypeError;
-use function error_log;
 use function filter_var;
 use function is_string;
-use function sprintf;
-use function str_replace;
-use function substr;
 use const FILTER_VALIDATE_INT;
 
 class PostController extends BaseController
@@ -60,10 +59,16 @@ class PostController extends BaseController
         }
     }
 
-    public function store(object $request): void
+    public function store(): void
     {
         try {
-            $this->createFromRequest($request);
+            $input = $this->guardedInput();
+
+            if ($input === null) {
+                return;
+            }
+
+            $this->createFromRequest($input);
         } catch (TypeError | Error $exception) {
             $this->logError('store', $exception);
             $this->errorResponse('Invalid data', 422);
@@ -73,10 +78,16 @@ class PostController extends BaseController
         }
     }
 
-    public function update(mixed $id, object $request): void
+    public function update(mixed $id): void
     {
         try {
-            $this->updateFromRequest($id, $request);
+            $input = $this->guardedInput();
+
+            if ($input === null) {
+                return;
+            }
+
+            $this->updateFromRequest($id, $input);
         } catch (TypeError | Error $exception) {
             $this->logError('update', $exception);
             $this->errorResponse('Invalid data', 422);
@@ -89,6 +100,10 @@ class PostController extends BaseController
     public function delete(mixed $id): void
     {
         try {
+            if ($this->guardedInput() === null) {
+                return;
+            }
+
             $this->removePost($id);
         } catch (TypeError | Error $exception) {
             $this->logError('delete', $exception);
@@ -106,7 +121,19 @@ class PostController extends BaseController
         return new PostService(new PostRepository($pdo));
     }
 
-    private function createFromRequest(object $request): void
+    private function guardedInput(): ?BaseRequest
+    {
+        $guard = new RequestGuard();
+        $input = $guard->input();
+
+        if ($input === null || !$guard->csrfAccepted($input)) {
+            return null;
+        }
+
+        return $input;
+    }
+
+    private function createFromRequest(BaseRequest $request): void
     {
         $description = $this->readDescription($request);
 
@@ -128,7 +155,7 @@ class PostController extends BaseController
         $this->successResponse(['message' => 'Post created successfully', 'id' => $postId], 201);
     }
 
-    private function updateFromRequest(mixed $id, object $request): void
+    private function updateFromRequest(mixed $id, BaseRequest $request): void
     {
         $postId = $this->parseId($id);
 
@@ -147,7 +174,7 @@ class PostController extends BaseController
         $this->persistUpdate($postId, $request);
     }
 
-    private function persistUpdate(int $postId, object $request): void
+    private function persistUpdate(int $postId, BaseRequest $request): void
     {
         $description = $this->readDescription($request);
 
@@ -196,16 +223,15 @@ class PostController extends BaseController
         return $parsed === false ? null : $parsed;
     }
 
-    private function readDescription(object $request): ?string
+    private function readDescription(BaseRequest $request): ?string
     {
-        $raw = $request->get->description ?? null;
+        $raw = $request->body()['description'] ?? null;
 
         return is_string($raw) ? $raw : null;
     }
 
     private function logError(string $action, Throwable $exception): void
     {
-        // TODO(logger): frente C deve ligar o logger estruturado aqui.
-        error_log(sprintf('PostController %s failed: %s', $action, substr(str_replace("\n", ' ', $exception->getMessage()), 0, 200)));
+        Logger::error('Request failed', ['action' => $action, 'exception_class' => $exception::class]);
     }
 }

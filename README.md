@@ -116,7 +116,7 @@ This section provides a straightforward way to manage your database schema chang
 ### Supported Database Drivers
 
 - SQLite is the primary driver and is used for local migrations and functional tests. It requires `pdo_sqlite`.
-- MySQL and PostgreSQL migrations are exercised in CI with `pdo_mysql` and `pdo_pgsql`.
+- MySQL and PostgreSQL migrations require local verification with `pdo_mysql` and `pdo_pgsql`.
 - SQL Server migrations are experimental, require `PDO_SQLSRV`, and are not included in CI.
 - Any `DB_CONNECTION` outside `sqlite`, `mysql`, `pgsql`, and `sqlsrv` is rejected during configuration.
 - Schema rollback requires explicit `--force`; it drops schema objects and cannot recover deleted data, so arrange a separate backup.
@@ -132,4 +132,6 @@ composer test
 composer analyse
 ```
 
-CI runs the PHP quality gates on PHP 8.0, 8.1, 8.2, and 8.3; PHP 8.3 matches the configured Docker runtime. MySQL and PostgreSQL migration checks run on PHP 8.3. A gate can be skipped by setting its matching CI variable to `1`: `SKIP_LINT`, `SKIP_PHPUNIT`, `SKIP_PHPSTAN`, or `SKIP_MIGRATION_DRIVERS`. A skipped gate is not a passing gate.
+Checks run locally for this landing; automatic push/PR workflow triggers are disabled. The retained manual workflow defines PHP 8.0–8.3 gates and MySQL/PostgreSQL checks, but is not evidence that those environments passed.
+
+Authentication uses session cookies, not Bearer tokens. Obtain a token from `GET /csrf-token`, retain the session cookie, and send `X-CSRF-Token` on mutations (including registration and login). Send credentials and post descriptions in the form or JSON body; PUT also accepts URL-encoded bodies. JSON responses use `{status,message,data,errors}`; successful DELETE returns 204 without a body.

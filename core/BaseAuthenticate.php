@@ -84,16 +84,16 @@ final class BaseAuthenticate
     {
         BaseSession::start();
 
-        if (!$this->csrf->verify()) {
-            $this->errorResponse('Invalid CSRF token.', 403);
-
-            return null;
-        }
-
         $userId = BaseSession::get(self::SESSION_USER_KEY);
 
         if (!self::isUserId($userId)) {
             $this->errorResponse('Unauthorized', 401);
+
+            return null;
+        }
+
+        if (!$this->csrf->verify()) {
+            $this->errorResponse('Invalid CSRF token.', 403);
 
             return null;
         }
