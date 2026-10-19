@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Middleware\RequestGuard;
-use App\Repositories\PostRepository;
 use App\Services\PostService;
 use App\Traits\RestResponseTrait;
 use Core\BaseController;
-use Core\BaseDatabase;
 use Core\BaseRequest;
 use Core\Logger;
 use Error;
@@ -28,10 +26,10 @@ class PostController extends BaseController
     /** @var object */
     public $view;
 
-    public function __construct(?PostService $posts = null)
+    public function __construct(PostService $posts)
     {
         parent::__construct();
-        $this->posts = $posts ?? $this->defaultService();
+        $this->posts = $posts;
     }
 
     public function index(): void
@@ -112,13 +110,6 @@ class PostController extends BaseController
             $this->logError('delete', $exception);
             $this->errorResponse('Internal Server Error', 500);
         }
-    }
-
-    private function defaultService(): PostService
-    {
-        $pdo = (new BaseDatabase())->getDatabase();
-
-        return new PostService(new PostRepository($pdo));
     }
 
     private function guardedInput(): ?BaseRequest

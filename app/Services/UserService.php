@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Repositories\UserRepository;
-use Core\BaseValidator;
-use RuntimeException;
+use App\Identity\Application\DeleteUser;
+use App\Identity\Application\RegisterUser;
+use App\Identity\Domain\UserRepository as IdentityUserRepository;
+use App\Identity\Domain\Email;
 use function is_string;
-use function password_hash;
-use function trim;
 
 /**
  * User write rules.
@@ -21,10 +19,8 @@ use function trim;
  */
 final class UserService
 {
-    public function __construct(
-        private UserRepository $users,
-        private User $model,
-    ) {
+    public function __construct(private RegisterUser $registerUser, private DeleteUser $deleteUser, private IdentityUserRepository $users)
+    {
     }
 
     /**
@@ -36,25 +32,7 @@ final class UserService
      */
     public function register(array $input): array
     {
-        $errors = $this->validate($input);
-
-        if ($errors !== []) {
-            throw new UserValidationException($errors);
-        }
-
-        $name = trim((string) ($input['name'] ?? ''));
-        $email = UserRepository::normalizeEmail((string) ($input['email'] ?? ''));
-        $hash = password_hash((string) ($input['password'] ?? ''), PASSWORD_DEFAULT);
-
-        if (!is_string($hash)) {
-            throw new RuntimeException('Password hashing failed.');
-        }
-
-        return [
-            'id' => $this->users->create($name, $email, $hash),
-            'name' => $name,
-            'email' => $email,
-        ];
+        return $this->registerUser->execute($input);
     }
 
     /**
@@ -64,24 +42,15 @@ final class UserService
      */
     public function validate(array $input): array
     {
-        $errors = BaseValidator::make($input, $this->model->rules(), $this->lookup());
-
-        if ($errors !== []) {
-            return $errors;
-        }
-
         $email = $input['email'] ?? null;
 
-        if (!is_string($email) || !$this->users->emailExists($email)) {
-            return $errors;
-        }
-
-        return ['email' => ['The email has already been taken.']];
+        return is_string($email) && $this->users->findByEmail(new Email($email)) !== null
+            ? ['email' => ['The email has already been taken.']]
+            : [];
     }
 
-    private function lookup(): callable
+    public function delete(int $id): bool
     {
-        return fn (string $table, string $column, mixed $value, ?int $ignoreId): bool
-            => $this->users->exists($table, $column, $value, $ignoreId);
+        return $this->deleteUser->execute($id);
     }
 }

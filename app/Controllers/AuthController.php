@@ -5,17 +5,12 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Middleware\RequestGuard;
-use App\Models\User;
-use App\Repositories\UserRepository;
-use App\Services\AuthResult;
-use App\Services\AuthService;
+use App\Identity\Application\AuthResult;
+use App\Identity\Application\AuthService;
 use App\Traits\RestResponseTrait;
-use Core\BaseAuthenticate;
 use Core\BaseController;
-use Core\BaseDatabase;
 use Core\BaseRequest;
 use Core\BaseValidator;
-use PDO;
 use PDOException;
 use function headers_sent;
 
@@ -34,18 +29,11 @@ final class AuthController extends BaseController
         'password' => 'required|string|min:1|max:255',
     ];
 
-    private BaseDatabase $connection;
-
     private RequestGuard $guard;
 
-    private ?AuthService $service = null;
-
-    private ?PDO $pdo = null;
-
-    public function __construct()
+    public function __construct(private AuthService $auth)
     {
         parent::__construct();
-        $this->connection = new BaseDatabase();
         $this->guard = new RequestGuard();
     }
 
@@ -99,7 +87,7 @@ final class AuthController extends BaseController
             return;
         }
 
-        $this->service()->logout();
+        $this->auth->logout();
         $this->successResponse(['message' => 'Logout success.']);
     }
 
@@ -129,7 +117,7 @@ final class AuthController extends BaseController
     private function respondToLogin(BaseRequest $input, array $credentials): void
     {
         try {
-            $result = $this->service()->login($credentials['email'], $credentials['password'], $input->clientIp());
+            $result = $this->auth->login($credentials['email'], $credentials['password'], $input->clientIp());
         } catch (PDOException $exception) {
             $this->errorResponse('Unable to process the login.', 500);
 
@@ -158,32 +146,11 @@ final class AuthController extends BaseController
 
     private function logoutAllowed(BaseRequest $input): bool
     {
-        if (!$this->service()->hasAuthenticatedUser()) {
+        if (!$this->auth->hasAuthenticatedUser()) {
             return true;
         }
 
         return $this->guard->csrfAccepted($input);
     }
 
-    private function service(): AuthService
-    {
-        if ($this->service === null) {
-            $pdo = $this->pdo();
-            $this->service = new AuthService(
-                new UserRepository($pdo),
-                new BaseAuthenticate(new User($pdo)),
-            );
-        }
-
-        return $this->service;
-    }
-
-    private function pdo(): PDO
-    {
-        if ($this->pdo === null) {
-            $this->pdo = $this->connection->getDatabase();
-        }
-
-        return $this->pdo;
-    }
 }

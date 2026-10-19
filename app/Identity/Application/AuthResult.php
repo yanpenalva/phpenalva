@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Identity\Application;
 
 /**
  * Outcome of a login attempt, with no detail that could tell an attacker whether

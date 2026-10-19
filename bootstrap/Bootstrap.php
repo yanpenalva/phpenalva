@@ -47,6 +47,7 @@ This file takes care of the initialization of all the files in the application.
 It is the first file to be called in the application.
 */
 $routes = require_once __DIR__ . '/../routes/routes.php';
+require_once __DIR__ . '/dependencies.php';
 $router = new Routes($routes);
 
 function exceptionStatus(Throwable $exception): int
@@ -57,7 +58,7 @@ function exceptionStatus(Throwable $exception): int
 
     $code = (int) $exception->getCode();
 
-    if (in_array($code, [400, 401, 403, 404, 422], true)) {
+    if (in_array($code, [400, 401, 403, 404, 422, 429], true)) {
         return $code;
     }
 
@@ -87,6 +88,7 @@ function publicMessage(int $status): string
         403 => 'Forbidden',
         404 => 'Not Found',
         422 => 'Unprocessable Entity',
+        429 => 'Too Many Requests',
         default => 'Internal Server Error',
     };
 }

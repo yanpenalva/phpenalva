@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Identity\Application;
 
-use App\Repositories\UserRepository;
+use App\Services\AuthRateLimiter;
+use App\Identity\Infrastructure\Persistence\PdoUserRepository;
 use Core\BaseAuthenticate;
 use Core\BaseSession;
 use function bin2hex;
@@ -33,7 +34,7 @@ final class AuthService
     private AuthRateLimiter $limiter;
 
     public function __construct(
-        private UserRepository $users,
+        private PdoUserRepository $users,
         private BaseAuthenticate $authenticate,
     ) {
         $this->limiter = new AuthRateLimiter();
@@ -47,7 +48,7 @@ final class AuthService
             return AuthResult::throttled();
         }
 
-        $user = $this->users->findByEmail($account);
+        $user = $this->users->findCredentials($account);
         $passwordMatches = $this->authenticate->verifyPassword($password, self::hashFor($user));
 
         if (!is_array($user) || !$passwordMatches) {

@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace Bootstrap;
 
-use App\Models\User;
-use Core\BaseAuthenticate;
-use Core\BaseDatabase;
+require_once __DIR__ . '/dependencies.php';
+
 use stdClass;
 use function array_keys;
 use function array_reduce;
@@ -21,11 +20,8 @@ class Routes
     /** @var array<int, array<string, mixed>> */
     protected array $routes = [];
 
-    protected BaseDatabase $connection;
-
     public function __construct(array $routes)
     {
-        $this->connection = new BaseDatabase();
         $this->setRoutes($routes);
         $this->run();
     }
@@ -103,7 +99,13 @@ class Routes
                 continue;
             }
 
-            $controller = Controller::createController((string) $route['controller']);
+            $factory = match ((string) $route['controller']) {
+                'PostController' => __NAMESPACE__ . '\\postService',
+                'UserController' => __NAMESPACE__ . '\\userService',
+                'AuthController' => __NAMESPACE__ . '\\authService',
+                default => null,
+            };
+            $controller = Controller::createController((string) $route['controller'], $factory === null ? null : $factory());
 
             if ($route['auth'] && !$this->isAuthenticated()) {
                 $controller->forbidden();
@@ -124,11 +126,8 @@ class Routes
     /**
      * @return mixed
      */
-    private function isAuthenticated()
+    private function isAuthenticated(): bool
     {
-        $conn = $this->connection->getDatabase();
-        $auth = new BaseAuthenticate(new User($conn));
-
-        return $auth->check();
+        return authenticate();
     }
 }
