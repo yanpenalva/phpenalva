@@ -112,3 +112,24 @@ The migration system is flexible, allowing you to manage changes to the database
 ---
 
 This section provides a straightforward way to manage your database schema changes with migrations, making it easy to apply and roll back changes using the `composer migrate` command.
+
+### Supported Database Drivers
+
+- SQLite is the primary driver and is used for local migrations and functional tests. It requires `pdo_sqlite`.
+- MySQL and PostgreSQL migrations are exercised in CI with `pdo_mysql` and `pdo_pgsql`.
+- SQL Server migrations are experimental, require `PDO_SQLSRV`, and are not included in CI.
+- Any `DB_CONNECTION` outside `sqlite`, `mysql`, `pgsql`, and `sqlsrv` is rejected during configuration.
+- Schema rollback requires explicit `--force`; it drops schema objects and cannot recover deleted data, so arrange a separate backup.
+
+### Tests and CI Gates
+
+Run the local checks with:
+
+```bash
+composer validate
+composer lint
+composer test
+composer analyse
+```
+
+CI runs the PHP quality gates on PHP 8.0, 8.1, 8.2, and 8.3; PHP 8.3 matches the configured Docker runtime. MySQL and PostgreSQL migration checks run on PHP 8.3. A gate can be skipped by setting its matching CI variable to `1`: `SKIP_LINT`, `SKIP_PHPUNIT`, `SKIP_PHPSTAN`, or `SKIP_MIGRATION_DRIVERS`. A skipped gate is not a passing gate.

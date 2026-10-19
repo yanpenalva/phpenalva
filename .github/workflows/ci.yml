@@ -1,0 +1,127 @@
+name: PHP CI
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+    inputs:
+      skip_lint:
+        description: Skip the PHP syntax gate (SKIP_LINT=1)
+        required: false
+        type: boolean
+        default: false
+      skip_phpunit:
+        description: Skip PHPUnit (SKIP_PHPUNIT=1)
+        required: false
+        type: boolean
+        default: false
+      skip_phpstan:
+        description: Skip PHPStan (SKIP_PHPSTAN=1)
+        required: false
+        type: boolean
+        default: false
+      skip_migration_drivers:
+        description: Skip MySQL/PostgreSQL migration checks (SKIP_MIGRATION_DRIVERS=1)
+        required: false
+        type: boolean
+        default: false
+
+env:
+  SKIP_LINT: ${{ inputs.skip_lint && '1' || vars.SKIP_LINT || '0' }}
+  SKIP_PHPUNIT: ${{ inputs.skip_phpunit && '1' || vars.SKIP_PHPUNIT || '0' }}
+  SKIP_PHPSTAN: ${{ inputs.skip_phpstan && '1' || vars.SKIP_PHPSTAN || '0' }}
+  SKIP_MIGRATION_DRIVERS: ${{ inputs.skip_migration_drivers && '1' || vars.SKIP_MIGRATION_DRIVERS || '0' }}
+
+jobs:
+  quality:
+    name: PHP ${{ matrix.php-version }} quality gates
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['8.0', '8.1', '8.2', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PHP ${{ matrix.php-version }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: dom, mbstring, pdo_sqlite, xml, zip
+          coverage: none
+      - name: Validate Composer files
+        run: composer validate --strict
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHP syntax
+        if: env.SKIP_LINT != '1'
+        run: find app bootstrap config core database public routes tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: PHPUnit
+        if: env.SKIP_PHPUNIT != '1'
+        run: composer test
+      - name: PHPStan
+        if: env.SKIP_PHPSTAN != '1'
+        run: composer analyse
+
+  migration-drivers:
+    name: ${{ matrix.driver }} migration checks (PHP 8.3 deploy runtime)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - driver: mysql
+            image: mysql:8.4
+            port: 3306
+            username: root
+            password: root
+            health-command: mysqladmin ping -h 127.0.0.1 -uroot -proot
+          - driver: pgsql
+            image: postgres:16
+            port: 5432
+            username: postgres
+            password: postgres
+            health-command: pg_isready -U postgres -d phpenalva
+    services:
+      database:
+        image: ${{ matrix.image }}
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: phpenalva
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: phpenalva
+        ports:
+          - ${{ matrix.port }}:${{ matrix.port }}
+        options: >-
+          --health-cmd="${{ matrix.health-command }}"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DB_CONNECTION: ${{ matrix.driver }}
+      DB_HOST: 127.0.0.1
+      DB_PORT: ${{ matrix.port }}
+      DB_DATABASE: phpenalva
+      DB_USERNAME: ${{ matrix.username }}
+      DB_PASSWORD: ${{ matrix.password }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, mbstring, pdo_mysql, pdo_pgsql, pdo_sqlite, xml, zip
+          coverage: none
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Apply migrations
+        if: env.SKIP_MIGRATION_DRIVERS != '1'
+        run: php config/migrate.php up
+      - name: Roll back the latest migration
+        if: env.SKIP_MIGRATION_DRIVERS != '1'
+        run: php config/migrate.php rollback --force
+      - name: Reapply migrations
+        if: env.SKIP_MIGRATION_DRIVERS != '1'
+        run: php config/migrate.php up
+      - name: Roll back all migrations
+        if: env.SKIP_MIGRATION_DRIVERS != '1'
+        run: php config/migrate.php down --force
