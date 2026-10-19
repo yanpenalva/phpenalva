@@ -17,7 +17,7 @@ Built with simplicity in mind, PHPenalva empowers you to swiftly create APIs and
 
 ### Documentação e arquitetura
 
-Consulte [`docs/`](docs/): instalação, arquitetura em contextos Identity e Content e receitas executáveis. O legado `App\\Models`, `App\\Repositories` e as fachadas `App\\Services` foi removido dos caminhos da aplicação; `Core\\BaseModel` continua disponível como infraestrutura legada opcional. O limitador de login mantém estado na memória do processo; em deployments com múltiplos workers/processos, cada processo possui contagem independente. Não há store compartilhado configurado.
+Consulte [`docs/`](docs/): instalação, arquitetura em contextos Identity e Content e receitas executáveis. O legado `App\\Models`, `App\\Repositories` e as fachadas `App\\Services` foi removido dos caminhos da aplicação; `Core\\BaseModel` continua disponível como infraestrutura legada opcional. O limitador de login compartilha tentativas entre processos na mesma máquina via arquivos; multi-máquina requer store compartilhado (Redis é uma evolução futura).
 
 ### Installation
 Getting started with PHPenalva is a breeze. <br>

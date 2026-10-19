@@ -6,7 +6,7 @@ Gerencia consulta, criação, atualização e remoção de posts. `PostDescripti
 
 ## 2. Models/tables
 
-Tabela `posts`: `id`, `user_id` nullable, `description`, timestamps; FK para `users`. Agregado `Post` mantém id, descrição e authorId opcional. Schema não foi alterado.
+Tabela `posts`: `id`, `user_id` nullable, `description`, timestamps; FK para `users` usa `ON DELETE SET NULL`, preservando post sem autor quando um usuário é removido. Agregado `Post` mantém id, descrição e authorId opcional.
 
 ## 3. Controllers
 

@@ -18,4 +18,4 @@ Domain não depende de `Core`, controllers, sessão ou PDO. `Core` não referenc
 
 ## Persistência e segurança
 
-Migrations existentes são mantidas; mudanças estruturais exigem migration registrada em `core/MigrationManager.php`. Não existe política inferida de autoria de post nem de exclusão em cascata de usuários. Autenticação usa cookie, CSRF e respostas genéricas para credenciais inválidas. O rate limiter atual é por processo.
+Migrations existentes são mantidas; mudanças estruturais exigem migration registrada em `core/MigrationManager.php`. `posts.user_id` é opcional e usa `ON DELETE SET NULL`; `users.email` tem restrição única (e índice). Autenticação usa cookie, CSRF e respostas genéricas para credenciais inválidas. Matriz de drivers: SQLite verificado ao vivo; PostgreSQL 17.11 declarado, NOT VERIFIED ao vivo nesta execução (socket local indisponível); MySQL e SQL Server declarados, NOT VERIFIED ao vivo (drivers locais ausentes). O rate limiter usa arquivos compartilhados entre processos locais; multi-máquina exige store como Redis.

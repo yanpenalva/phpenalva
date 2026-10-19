@@ -11,12 +11,39 @@ use App\Identity\Domain\EmailAlreadyUsed;
 use App\Identity\Domain\User;
 use App\Identity\Domain\UserRepository;
 use App\Identity\Infrastructure\Persistence\PdoUserRepository;
+use App\Identity\Application\AuthRateLimiter;
+use App\Identity\Infrastructure\Persistence\FileAttemptStore;
 use InvalidArgumentException;
 use PDO;
 use PHPUnit\Framework\TestCase;
 
 final class IdentityTest extends TestCase
 {
+    public function testFileAttemptStoreSharesLimitAcrossInstancesAndPrunesExpiredAttempts(): void
+    {
+        $directory = sys_get_temp_dir() . '/phpenalva-test-' . bin2hex(random_bytes(8));
+        $limiter = new AuthRateLimiter(new FileAttemptStore($directory));
+        for ($attempt = 0; $attempt < 5; $attempt++) { $limiter->recordFailure('a@example.com', '127.0.0.1'); }
+        self::assertTrue((new AuthRateLimiter(new FileAttemptStore($directory)))->tooManyAttempts('a@example.com', '127.0.0.1'));
+        $path = glob($directory . '/*.json')[0];
+        file_put_contents($path, json_encode([time() - 901]));
+        self::assertFalse($limiter->tooManyAttempts('a@example.com', '127.0.0.1'));
+        foreach (glob($directory . '/*') as $file) { unlink($file); }
+        rmdir($directory);
+    }
+
+    public function testFileAttemptStoreSharesLimitAcrossSeparatePhpProcesses(): void
+    {
+        $directory = sys_get_temp_dir() . '/phpenalva-test-' . bin2hex(random_bytes(8));
+        $autoload = dirname(__DIR__, 3) . '/vendor/autoload.php';
+        $script = 'require ' . var_export($autoload, true) . '; $l=new \\App\\Identity\\Application\\AuthRateLimiter(new \\App\\Identity\\Infrastructure\\Persistence\\FileAttemptStore(' . var_export($directory, true) . ')); for($i=0;$i<5;$i++){$l->recordFailure("a@example.com","127.0.0.1");}';
+        exec(escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg($script), $output, $status);
+        self::assertSame(0, $status);
+        self::assertTrue((new AuthRateLimiter(new FileAttemptStore($directory)))->tooManyAttempts('a@example.com', '127.0.0.1'));
+        foreach (glob($directory . '/*') as $file) { unlink($file); }
+        rmdir($directory);
+    }
+
     public function testEmailNormalizesAndEnforcesHundredCharacterLimit(): void
     {
         self::assertSame('a@example.com', (new Email(' A@EXAMPLE.COM '))->value());

@@ -6,7 +6,7 @@ Gerencia cadastro, remoção e autenticação por sessão. `Email` normaliza par
 
 ## 2. Models/tables
 
-Tabela `users`: `id`, `name`, `email` (unique), `password`, timestamps. Entidade `App\Identity\Domain\User`; value object `Email`. Sem alteração de schema nesta migração.
+Tabela `users`: `id`, `name`, `email` (unique, indexado), `password`, timestamps. Entidade `App\Identity\Domain\User`; value object `Email`.
 
 ## 3. Controllers
 
@@ -14,7 +14,7 @@ Tabela `users`: `id`, `name`, `email` (unique), `password`, timestamps. Entidade
 
 ## 4. Services
 
-`RegisterUser` valida, coordena unicidade, hash e persistência. `DeleteUser` remove por id. `AuthService` verifica credenciais com hash dummy em conta inexistente, inicia sessão e limpa falhas em sucesso. `AuthRateLimiter` guarda cinco falhas por 900 segundos em memória de processo; contagens não são compartilhadas entre workers.
+`RegisterUser` valida, coordena unicidade, hash e persistência. `DeleteUser` remove por id. `AuthService` verifica credenciais com hash dummy em conta inexistente, inicia sessão e limpa falhas em sucesso. `AuthRateLimiter` usa `AttemptStore`; `FileAttemptStore` coordena processos na mesma máquina com `flock`, guarda cinco falhas por 900 segundos e falha aberta em erro de IO para não derrubar login. Em multi-máquina, os arquivos não são compartilhados; Redis poderá substituir o adapter futuramente.
 
 ## 5. Repositories
 

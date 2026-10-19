@@ -36,8 +36,9 @@ final class AuthService
     public function __construct(
         private CredentialLookup $users,
         private BaseAuthenticate $authenticate,
+        ?AuthRateLimiter $limiter = null,
     ) {
-        $this->limiter = new AuthRateLimiter();
+        $this->limiter = $limiter ?? new AuthRateLimiter();
     }
 
     public function login(string $email, string $password, string $clientIp): AuthResult
