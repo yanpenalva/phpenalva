@@ -1,0 +1,13 @@
+parameters:
+    level: 5
+    phpVersion: 80000
+    paths:
+        - config/database.php
+        - config/migrate.php
+        - core/BaseMigration.php
+        - core/MigrationManager.php
+        - core/Logger.php
+        - database/migrations
+        - tests
+    bootstrapFiles:
+        - vendor/autoload.php
