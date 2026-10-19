@@ -1,13 +1,30 @@
 # Installation
 
-## Requirements
+## Prerequisites
 
-PHP 8.0 or later, Composer, PDO, and the PDO extension for the selected database driver are required. A web server with URL rewriting is used by the provided development setup.
+PHP 8.0 or later, Composer, PDO, and the PDO extension for the selected driver are required. The Docker path additionally requires Docker Engine and the Compose plugin. The provided Nginx configuration supplies the development web server.
 
 ```sh
 composer install
 cp .env.example .env
 ```
+
+## Environment variables
+
+Copy `.env.example` to `.env`; values are loaded by `vlucas/phpdotenv`.
+
+| Variable | Purpose | Default/behavior |
+|---|---|---|
+| `APP_NAME` | Application name | `PHPenalva` in example file |
+| `APP_ENV` | Environment label | `example` in example file |
+| `APP_URL` | Application URL | `http://localhost` in example file |
+| `APP_PORT` | Port variable in example | `8000`; Compose publishes web on fixed host port 8081 |
+| `DB_CONNECTION` | PDO driver: `sqlite`, `mysql`, `pgsql`, `sqlsrv` | SQLite when unset/empty |
+| `DB_DATABASE` | SQLite file path or server database name | SQLite: `<project>/database/database.sqlite`; server: `phpenalva` |
+| `DB_HOST` | Server host | `localhost` |
+| `DB_PORT` | Server port | MySQL 3306, PostgreSQL 5432, SQL Server 1433 |
+| `DB_USERNAME` | Server username | MySQL `root`, PostgreSQL `postgres`, SQL Server `sa` |
+| `DB_PASSWORD` | Server password | Empty |
 
 ## Database configuration
 
@@ -23,12 +40,14 @@ Registered migrations are declared in `core/MigrationManager.php`; migration fil
 composer migrate
 ```
 
-The command accepts `up` (default), `down`, or `rollback` (latest applied migration only). Both rollback operations require explicit `--force`:
+The command accepts `up` (default), `down`, or `rollback` (latest applied migration only). Initial output lists `Applied migration: CreateUsersTable` and `Applied migration: CreatePostsTable`; a repeat prints `No migrations changed.` Both rollback operations require explicit `--force`:
 
 ```sh
 php config/migrate.php rollback --force
 php config/migrate.php down --force
 ```
+
+Expected rollback output is `Rolled back migration: CreatePostsTable` (and, for `down`, `CreateUsersTable`). Empty or already-rolled-back state prints `No migrations changed.`
 
 `down` drops all registered schema objects in reverse dependency order; `rollback` drops only the latest applied migration. These operations remove data in the affected tables. Arrange an independent backup before running them.
 
@@ -46,7 +65,7 @@ flowchart TD
     DownAll --> RemoveAll[Remove history records]
 ```
 
-## Development environment
+## Docker development environment
 
 The Compose file is `.docker/docker-compose.yaml`. Start and stop it through Composer scripts:
 
@@ -56,6 +75,8 @@ composer stop
 ```
 
 The Nginx service publishes port `8081` on the host. The Compose file defines the PHP application and web server; database configuration is supplied separately through `.env`.
+
+After dependencies, environment, and database migrations are configured, the web application is available at `http://localhost:8081`.
 
 ## Authentication requests
 

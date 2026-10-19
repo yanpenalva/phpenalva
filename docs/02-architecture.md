@@ -102,3 +102,7 @@ sequenceDiagram
 ## Authentication and responses
 
 Authentication is session-cookie based. Mutating requests require CSRF validation. Invalid credentials return a generic `401`; throttled login returns `429`. JSON responses use `{status, message, data, errors}`. Successful DELETE responses use `204` without a body.
+
+## Project conventions
+
+PHP source files begin with `declare(strict_types=1);` and use explicit types. Controllers handle HTTP parsing and output while use cases own application behavior and persistence adapters own SQL. Commit subjects follow `<type>: <description>` with Conventional Commit types such as `feat`, `fix`, `docs`, `refactor`, and `test`.
