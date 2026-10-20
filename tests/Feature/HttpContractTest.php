@@ -198,6 +198,22 @@ final class HttpContractTest extends TestCase
         self::assertSame('error', $this->decodeResponse($response)['status']);
     }
 
+    public function testDebugRouteIsGatedByAppDebug(): void
+    {
+        self::assertSame(404, $this->request('GET', '/debug')['status']);
+        $this->stopServer();
+        $this->startServer('true');
+        $response = $this->request('GET', '/debug');
+        self::assertSame(200, $response['status']);
+        self::assertStringContainsString('Timeline', $response['body']);
+        self::assertStringContainsString('bootstrap start', $response['body']);
+        self::assertStringContainsString('route matched', $response['body']);
+        self::assertStringContainsString('use-case executed', $response['body']);
+        self::assertStringContainsString('render start', $response['body']);
+        self::assertStringContainsString('render end', $response['body']);
+        self::assertStringNotContainsString('password', $response['body']);
+    }
+
     public function testPostsReadJsonPostAndPutBodies(): void
     {
         $this->login();
@@ -245,7 +261,21 @@ final class HttpContractTest extends TestCase
         self::assertSame(200, $this->request('POST', '/login', $credentials)['status']);
     }
 
-    private function startServer(): void
+    private function stopServer(): void
+    {
+        if ($this->serverProcess === null) {
+            return;
+        }
+        proc_terminate($this->serverProcess);
+        foreach ($this->serverPipes as $pipe) {
+            fclose($pipe);
+        }
+        proc_close($this->serverProcess);
+        $this->serverProcess = null;
+        $this->serverPipes = [];
+    }
+
+    private function startServer(string $debug = 'false'): void
     {
         $socket = stream_socket_server('tcp://127.0.0.1:0', $errorCode, $errorMessage);
 
@@ -274,6 +304,7 @@ final class HttpContractTest extends TestCase
         $environment['DB_PORT'] = '';
         $environment['DB_USERNAME'] = '';
         $environment['DB_PASSWORD'] = '';
+        $environment['APP_DEBUG'] = $debug;
         $routerPath = sprintf('%s/tests/Feature/HttpTestRouter.php', $this->projectRoot);
         $publicPath = sprintf('%s/public', $this->projectRoot);
         $command = [PHP_BINARY, '-d', 'display_errors=0', '-d', sprintf('session.save_path=%s', $this->sessionPath), '-S', sprintf('127.0.0.1:%d', $this->serverPort), '-t', $publicPath, $routerPath];

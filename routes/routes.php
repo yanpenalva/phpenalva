@@ -6,6 +6,7 @@ declare(strict_types=1);
 // Mutating routes require the session CSRF token; the protected ones are marked
 // with 'auth' and are additionally rejected without an authenticated session.
 $route[] = ['GET', '/', 'WelcomeController@index'];
+$route[] = ['GET', '/debug', 'DebugController@index'];
 $route[] = ['GET', '/api', 'WelcomeController@apiIndex'];
 $route[] = ['GET', '/csrf-token', 'AuthController@csrfToken'];
 

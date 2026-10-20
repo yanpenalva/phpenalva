@@ -10,6 +10,7 @@
 | `tests/Unit/Identity/IdentityTest.php` | Email/user rules, registration and duplicate handling, `PdoUserRepository` and race handling using SQLite memory, and file-backed login-attempt limits including a separate PHP process. |
 | `tests/Unit/DatabaseConfigTest.php` | Database configuration and supported driver selection. |
 | `tests/Unit/LoggerTest.php` | Logger behavior. |
+| `tests/Unit/Console/ConsoleTest.php` | CLI command output and exit codes in subprocesses using temporary route and log fixtures. |
 | `tests/Feature/HttpContractTest.php` | Live PHP HTTP server, JSON envelope, routing/errors, registration and post flows, authentication/CSRF, malformed bodies, and persistence errors with a temporary SQLite database. |
 | `tests/Feature/MigrationManagerTest.php` | SQLite migration, ordering, and rollback lifecycle; MySQL/PostgreSQL/SQL Server DDL strings through a recording PDO double, not live servers. |
 

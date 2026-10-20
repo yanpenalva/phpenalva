@@ -1,0 +1,109 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+$root = getenv('PHPENALVA_ROOT') ?: dirname(__DIR__);
+require dirname(__DIR__) . '/vendor/autoload.php';
+if (is_file($root . '/.env')) {
+    foreach (file($root . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+        if (str_starts_with(trim($line), '#') || !str_contains($line, '=')) continue;
+        [$key, $value] = explode('=', $line, 2);
+        $key = trim($key);
+        $value = trim($value);
+        if (preg_match('/\A[A-Z_][A-Z0-9_]*\z/i', $key) !== 1) continue;
+        $value = trim($value, " \t\n\r\0\x0B\"'");
+        $_ENV[$key] = $value;
+        putenv($key . '=' . $value);
+    }
+}
+
+$args = $argv;
+array_shift($args);
+$command = array_shift($args) ?? 'help';
+$help = static function (): void {
+    echo "PHPenalva console\nCommands: migrate [--rollback|--fresh], routes:list, logs:tail [--lines=N] [--level=LEVEL], debug:check\n";
+};
+
+try {
+    if (in_array('--help', $args, true) || in_array('-h', $args, true)) {
+        $help();
+        exit(0);
+    }
+    switch ($command) {
+        case 'help':
+            $help();
+            break;
+        case 'migrate':
+            $rollback = in_array('--rollback', $args, true);
+            $fresh = in_array('--fresh', $args, true);
+            if (count(array_filter($args, static fn (string $arg): bool => !in_array($arg, ['--rollback', '--fresh'], true))) || ($rollback && $fresh)) {
+                throw new InvalidArgumentException('Use migrate with at most one of --rollback or --fresh.');
+            }
+            $config = require $root . '/config/database.php';
+            $connection = $config['connections'][$config['default']];
+            $pdo = new PDO($connection['dsn'], $connection['username'], $connection['password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+            $manager = new \Core\MigrationManager($pdo);
+            if ($fresh) {
+                $rolledBack = $manager->rollback(true);
+                foreach ($rolledBack as $name) echo 'Rolled back migration: ' . $name . PHP_EOL;
+                $changes = $manager->migrate();
+                foreach ($changes as $name) echo 'Applied migration: ' . $name . PHP_EOL;
+                if ($rolledBack === [] && $changes === []) echo "No migrations changed.\n";
+            } else {
+                $changes = $rollback ? $manager->rollbackLast(true) : $manager->migrate();
+                foreach ($changes as $name) echo ($rollback ? 'Rolled back migration: ' : 'Applied migration: ') . $name . PHP_EOL;
+                if ($changes === []) echo "No migrations changed.\n";
+            }
+            break;
+        case 'routes:list':
+            if ($args) throw new InvalidArgumentException('routes:list takes no options.');
+            foreach (require $root . '/routes/routes.php' as $route) echo implode(' ', [$route[0], $route[1], $route[2]]) . PHP_EOL;
+            break;
+        case 'logs:tail':
+            $lines = 20;
+            $level = null;
+            foreach ($args as $arg) {
+                if (preg_match('/\A--lines=([1-9][0-9]*)\z/', $arg, $match)) $lines = (int) $match[1];
+                elseif (preg_match('/\A--level=(info|error)\z/i', $arg, $match)) $level = strtolower($match[1]);
+                else throw new InvalidArgumentException('Use --lines=N and/or --level=info|error.');
+            }
+            $path = $root . '/storage/logs/app-' . gmdate('Y-m-d') . '.log';
+            if (!is_file($path) || !is_readable($path)) throw new RuntimeException('No readable log file exists for today.');
+            $entries = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            if ($entries === false) throw new RuntimeException('Unable to read log file.');
+            $entries = array_slice($entries, -$lines);
+            foreach ($entries as $line) {
+                $entry = json_decode($line, true);
+                if (!is_array($entry)) continue;
+                if ($level !== null && strtolower((string) ($entry['level'] ?? '')) !== $level) continue;
+                echo sprintf("%s %-5s %s\n", $entry['timestamp'] ?? '', strtoupper((string) ($entry['level'] ?? '')), $entry['message'] ?? '');
+            }
+            break;
+        case 'debug:check':
+            if ($args) throw new InvalidArgumentException('debug:check takes no options.');
+            $debug = strtolower((string) ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?: 'false'));
+            $driver = strtolower((string) ($_ENV['DB_CONNECTION'] ?? getenv('DB_CONNECTION') ?: 'sqlite'));
+            $drivers = PDO::getAvailableDrivers();
+            $sessionPath = (string) ini_get('session.save_path');
+            $sessionPath = explode(';', $sessionPath);
+            $sessionPath = end($sessionPath) ?: sys_get_temp_dir();
+            $logDir = $root . '/storage/logs';
+            $checks = [
+                'APP_DEBUG: ' . $debug,
+                'PDO drivers available: ' . ($drivers ? implode(', ', $drivers) : 'none'),
+                'PDO driver configured: ' . $driver . ' (' . (in_array($driver, $drivers, true) ? 'available' : 'unavailable') . ')',
+                'session.save_path writable: ' . (is_dir($sessionPath) && is_writable($sessionPath) ? 'yes' : 'no'),
+                'log directory writable: ' . (is_dir($logDir) ? (is_writable($logDir) ? 'yes' : 'no') : (is_writable(dirname($logDir)) ? 'yes (will be created)' : 'no')),
+                '.env present: ' . (is_file($root . '/.env') ? 'yes' : 'no'),
+            ];
+            foreach ($checks as $line) echo $line . PHP_EOL;
+            if (!in_array($driver, $drivers, true) || !is_dir($sessionPath) || !is_writable($sessionPath) || (!is_dir($logDir) && !is_writable(dirname($logDir))) || (is_dir($logDir) && !is_writable($logDir))) exit(1);
+            break;
+        default:
+            throw new InvalidArgumentException('Unknown command: ' . $command);
+    }
+} catch (Throwable $error) {
+    fwrite(STDERR, $error->getMessage() . PHP_EOL);
+    exit(1);
+}

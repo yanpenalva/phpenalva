@@ -24,4 +24,6 @@ foreach ($databaseEnvironmentKeys as $environmentKey) {
 }
 
 $routes = require sprintf('%s/routes/routes.php', $projectRoot);
+\Core\DebugCollector::reset();
+\Core\DebugCollector::checkpoint('bootstrap start');
 new \Bootstrap\Routes($routes);

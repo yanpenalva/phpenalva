@@ -1,5 +1,11 @@
 # Recipes
 
+## Debug a request
+
+## Use the framework CLI
+
+Install dependencies, then make the CLI executable once: `composer install && chmod +x bin/phpenalva`. Run `bin/phpenalva` or `composer phenalva` for command help. `bin/phpenalva routes:list` prints registered routes; `bin/phpenalva logs:tail --lines=50 --level=error` filters today's sanitized log; `bin/phpenalva debug:check` reports runtime readiness. Apply migrations with `bin/phpenalva migrate`; `--rollback` rolls back the latest migration and `--fresh` rolls back all registered migrations before reapplying them. Rollback and fresh operations destroy schema/data and require an arranged backup. The `/debug` screen remains available with `APP_DEBUG=true` for request and query timing inspection.
+
 Commands run from the repository root. Composer maps `App\\` to `app/`. These recipes show the repository's current wiring and avoid assuming generated scaffolding.
 
 ## Create a bounded context

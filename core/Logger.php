@@ -6,11 +6,24 @@ namespace Core;
 
 use function bin2hex;
 use function error_log;
+use function file_put_contents;
+use function file_exists;
+use function filesize;
+use function glob;
 use function gmdate;
+use function is_dir;
 use function is_string;
 use function json_encode;
+use function mkdir;
 use function preg_match;
+use function rename;
 use function random_bytes;
+use function rtrim;
+use function sort;
+use function count;
+use function array_shift;
+use function unlink;
+use function sprintf;
 use function strtolower;
 
 final class Logger
@@ -54,7 +67,9 @@ final class Logger
             'context' => self::sanitizeContext($context),
         ];
 
-        error_log(json_encode($entry, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+        $json = json_encode($entry, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        error_log($json);
+        self::appendFile($json);
     }
 
     /**
@@ -87,6 +102,7 @@ final class Logger
      */
     private static function sanitizeContext(array $context): array
     {
+        $context = self::removeSecrets($context);
         $safeContext = [];
 
         foreach (self::CONTEXT_PATTERNS as $key => $pattern) {
@@ -106,6 +122,36 @@ final class Logger
         }
 
         return $safeContext;
+    }
+
+    private static function removeSecrets(array $context): array
+    {
+        foreach ($context as $key => $value) {
+            if (preg_match('/password|token|cookie|authorization|secret|credential|api.?key/i', (string) $key) === 1) {
+                unset($context[$key]);
+            } elseif (is_array($value)) {
+                $context[$key] = self::removeSecrets($value);
+            }
+        }
+        return $context;
+    }
+
+    private static function appendFile(string $json): void
+    {
+        $directory = __DIR__ . '/../storage/logs';
+        if (!is_dir($directory) && !mkdir($directory, 0700, true) && !is_dir($directory)) {
+            return;
+        }
+        $path = sprintf('%s/app-%s.log', rtrim($directory, '/'), gmdate('Y-m-d'));
+        if (file_exists($path) && filesize($path) >= 1048576) {
+            @rename($path, $path . '.1');
+        }
+        @file_put_contents($path, $json . PHP_EOL, FILE_APPEND | LOCK_EX);
+        $files = glob($directory . '/app-*.log*') ?: [];
+        sort($files);
+        while (count($files) > 7) {
+            @unlink(array_shift($files));
+        }
     }
 
     private static function safeMessage(string $level, string $message): string
