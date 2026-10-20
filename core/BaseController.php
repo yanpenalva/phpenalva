@@ -8,7 +8,9 @@ use Exception;
 use stdClass;
 use function file_exists;
 use function http_response_code;
+use function htmlspecialchars;
 use function sprintf;
+use function str_replace;
 
 abstract class BaseController
 {
@@ -41,16 +43,27 @@ abstract class BaseController
 
     protected function renderView(string $viewName, ?string $layoutName = null): void
     {
+        DebugCollector::checkpoint('render start');
         $this->viewPath = $this->getViewPath($viewName);
         $this->layoutPath = $this->getViewPath((string) $layoutName);
 
         if ($layoutName !== null && $layoutName !== '') {
+            $debugPanel = $viewName === '/System/debug';
+            if ($debugPanel) {
+                ob_start();
+            }
             $this->getLayout();
+            DebugCollector::checkpoint('render end');
+            if ($debugPanel) {
+                $rendered = ob_get_clean();
+                echo str_replace('<!--DEBUG_TIMELINE-->', htmlspecialchars(var_export(DebugCollector::timeline(), true), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'), (string) $rendered);
+            }
 
             return;
         }
 
         $this->getContent();
+        DebugCollector::checkpoint('render end');
     }
 
     protected function getLayout(): void

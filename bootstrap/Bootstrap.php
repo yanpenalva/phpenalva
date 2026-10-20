@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bootstrap;
 
+
 use JsonException;
 use Throwable;
 use TypeError;
@@ -23,6 +24,8 @@ use function substr;
 use function trim;
 
 require __DIR__ . '/../vendor/autoload.php';
+\Core\DebugCollector::reset();
+\Core\DebugCollector::checkpoint('bootstrap start');
 
 // Treats all errors as exceptions.
 set_exception_handler(static function (Throwable $exception): void {

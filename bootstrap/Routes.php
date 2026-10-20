@@ -7,6 +7,7 @@ namespace Bootstrap;
 require_once __DIR__ . '/dependencies.php';
 
 use stdClass;
+use Core\DebugCollector;
 use function array_keys;
 use function array_reduce;
 use function count;
@@ -69,6 +70,10 @@ class Routes
     private function run(): void
     {
         $url = self::getUrl();
+        if ($url === '/debug' && !in_array(strtolower((string) ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?: '')), ['1', 'true'], true)) {
+            Controller::pageNotFound();
+            return;
+        }
         $urlArray = explode('/', $url);
 
         foreach ($this->routes as $route) {
@@ -101,6 +106,8 @@ class Routes
                 continue;
             }
 
+            DebugCollector::checkpoint('route matched');
+
             $factory = match ((string) $route['controller']) {
                 'PostController' => [__NAMESPACE__ . '\\postRepository', __NAMESPACE__ . '\\createPost', __NAMESPACE__ . '\\updatePost', __NAMESPACE__ . '\\deletePost'],
                 'UserController' => [__NAMESPACE__ . '\\registerUser', __NAMESPACE__ . '\\deleteUser'],
@@ -119,6 +126,7 @@ class Routes
             $action = (string) $route['action'];
             $params[] = $this->getRequest();
             $controller->{$action}(...$params);
+            DebugCollector::checkpoint('use-case executed');
 
             return;
         }

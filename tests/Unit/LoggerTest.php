@@ -7,6 +7,7 @@ namespace Tests\Unit;
 use Core\Logger;
 use PHPUnit\Framework\TestCase;
 use function file_get_contents;
+use function json_decode;
 use function ini_get;
 use function ini_set;
 use function sys_get_temp_dir;
@@ -41,6 +42,7 @@ final class LoggerTest extends TestCase
                 'token' => 'secret',
                 'cookie' => 'session',
                 'exception_class' => 'PDOException',
+                'nested' => ['authorization' => 'header-secret', 'secret' => 'deep-secret', 'safe' => 'value'],
             ]);
             $logEntry = file_get_contents($logPath);
 
@@ -56,6 +58,10 @@ final class LoggerTest extends TestCase
             self::assertStringNotContainsString('private', $logEntry);
             self::assertStringNotContainsString('secret', $logEntry);
             self::assertStringNotContainsString('session', $logEntry);
+            $decoded = json_decode($logEntry, true, 512, JSON_THROW_ON_ERROR);
+            self::assertIsArray($decoded);
+            self::assertStringNotContainsString('header-secret', $logEntry);
+            self::assertStringNotContainsString('deep-secret', $logEntry);
         } finally {
             ini_set('error_log', $previousErrorLog);
             unlink($logPath);

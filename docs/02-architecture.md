@@ -105,4 +105,8 @@ Authentication is session-cookie based. Mutating requests require CSRF validatio
 
 ## Project conventions
 
+## Debug tooling
+
+The framework console is `bin/phpenalva`; it lists routes, inspects sanitized JSON-lines logs, checks runtime configuration, and runs migrations. The `/debug` screen displays request and SQL timings plus the latest application log when `APP_DEBUG=true`. Log context is filtered for secret-like keys; keep debug mode disabled in production.
+
 PHP source files begin with `declare(strict_types=1);` and use explicit types. Controllers handle HTTP parsing and output while use cases own application behavior and persistence adapters own SQL. Commit subjects follow `<type>: <description>` with Conventional Commit types such as `feat`, `fix`, `docs`, `refactor`, and `test`.

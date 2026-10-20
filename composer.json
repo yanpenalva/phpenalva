@@ -32,6 +32,7 @@
         "stop": "docker compose -f .docker/docker-compose.yaml down",
         "restart": "docker compose -f .docker/docker-compose.yaml restart",
         "migrate": "php config/migrate.php",
+        "phenalva": "php bin/phpenalva",
         "test": "phpunit --configuration phpunit.xml",
         "lint": "php -l config/database.php && php -l config/migrate.php && php -l core/BaseMigration.php && php -l core/MigrationManager.php && php -l core/Logger.php && php -l database/migrations/CreateUsersTable.php && php -l database/migrations/CreatePostsTable.php && php -l tests/Feature/HttpTestRouter.php && php -l tests/Feature/HttpContractTest.php && php -l tests/Feature/MigrationManagerTest.php && php -l tests/Unit/DatabaseConfigTest.php && php -l tests/Unit/LoggerTest.php",
         "analyse": "phpstan analyse --configuration=phpstan.neon --no-progress"
