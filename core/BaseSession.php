@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace Core;
 
 use function headers_sent;
+use function ini_get;
 use function ini_set;
+use function is_dir;
 use function is_string;
+use function is_writable;
+use function mkdir;
 use function session_destroy;
 use function session_get_cookie_params;
 use function session_name;
@@ -99,6 +103,18 @@ final class BaseSession
         ini_set('session.use_trans_sid', '0');
         ini_set('session.cookie_httponly', '1');
         ini_set('session.cookie_samesite', self::SAME_SITE);
+
+        $savePath = (string) ini_get('session.save_path');
+
+        if ($savePath === '' || !is_writable($savePath)) {
+            $fallback = __DIR__ . '/../storage/sessions';
+
+            if ((!is_dir($fallback) && !mkdir($fallback, 0700, true) && !is_dir($fallback)) || !is_writable($fallback)) {
+                return;
+            }
+
+            ini_set('session.save_path', $fallback);
+        }
 
         session_set_cookie_params([
             'lifetime' => 0,

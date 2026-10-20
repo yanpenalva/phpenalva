@@ -17,7 +17,8 @@ $environmentValue = static function (string $key, string $fallback): string {
 
 $configuredDriver = $_ENV['DB_CONNECTION'] ?? getenv('DB_CONNECTION');
 $configuredDriverIsString = is_string($configuredDriver);
-$driver = $configuredDriverIsString ? strtolower(trim($configuredDriver)) : 'sqlite';
+$normalizedDriver = $configuredDriverIsString ? strtolower(trim($configuredDriver)) : '';
+$driver = $normalizedDriver === '' ? 'sqlite' : $normalizedDriver;
 
 $supportedDrivers = ['sqlite', 'mysql', 'pgsql', 'sqlsrv'];
 $driverIsSupported = in_array($driver, $supportedDrivers, true);

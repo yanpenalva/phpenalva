@@ -4,6 +4,7 @@ PHPenalva is a PHP application framework organized around HTTP entry points, bou
 
 ## Table of Contents
 
+- [Quickstart](#quickstart)
 - [Usage Recipes](#usage-recipes)
 - [Testing](#testing)
 - [Architecture](#architecture)
@@ -11,6 +12,12 @@ PHPenalva is a PHP application framework organized around HTTP entry points, bou
 - [Best Practices](#best-practices)
 - [Conventions](#conventions)
 - [Modules](#modules)
+
+## Quickstart
+
+Clone, install, migrate, serve, and complete a register-login-post cycle in about five minutes. Every command was executed against a fresh clone.
+
+**Full guide:** [docs/00-quickstart.md](docs/00-quickstart.md)
 
 ## Usage Recipes
 
