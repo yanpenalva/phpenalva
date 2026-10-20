@@ -1,4 +1,5 @@
-compsoer.lock
+composer.lock
 vendor
 .phpunit.cache/
 .env
+/storage/logs/*.log
