@@ -8,6 +8,8 @@ use Core\Logger;
 use PHPUnit\Framework\TestCase;
 use function file_get_contents;
 use function json_decode;
+use function preg_replace;
+use function trim;
 use function ini_get;
 use function ini_set;
 use function sys_get_temp_dir;
@@ -49,6 +51,8 @@ final class LoggerTest extends TestCase
             if ($logEntry === false) {
                 throw new \RuntimeException('Unable to read the temporary logger output.');
             }
+
+            $logEntry = preg_replace('/\A\[.*?\]\s?/', '', trim($logEntry)) ?? '';
 
             self::assertStringContainsString('"correlation_id":"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"', $logEntry);
             self::assertStringContainsString('"action":"database.connect"', $logEntry);

@@ -5,6 +5,22 @@ declare(strict_types=1);
 namespace Tests\Unit\Console;
 
 use PHPUnit\Framework\TestCase;
+use function array_merge;
+use function bin2hex;
+use function dirname;
+use function escapeshellarg;
+use function fclose;
+use function file_put_contents;
+use function getenv;
+use function glob;
+use function mkdir;
+use function proc_close;
+use function proc_open;
+use function random_bytes;
+use function rmdir;
+use function stream_get_contents;
+use function sys_get_temp_dir;
+use function unlink;
 
 final class ConsoleTest extends TestCase
 {
@@ -30,10 +46,10 @@ final class ConsoleTest extends TestCase
 
     public function testHelpAndRoutesList(): void
     {
-        [$status, $help] = $this->run();
+        [$status, $help] = $this->runConsole();
         self::assertSame(0, $status);
         self::assertStringContainsString('migrate', $help);
-        [$status, $routes] = $this->run('routes:list');
+        [$status, $routes] = $this->runConsole('routes:list');
         self::assertSame(0, $status);
         self::assertStringContainsString('GET /fixture FixtureController@index', $routes);
     }
@@ -52,7 +68,7 @@ final class ConsoleTest extends TestCase
     {
         $path = $this->root . '/storage/logs/app-' . gmdate('Y-m-d') . '.log';
         file_put_contents($path, json_encode(['timestamp' => '2026-10-20T00:00:00+00:00', 'level' => 'error', 'message' => 'safe', 'context' => ['password' => 'needle-secret']]) . "\n");
-        [$status, $output] = $this->run('logs:tail', '--level=error');
+        [$status, $output] = $this->runConsole('logs:tail', '--level=error');
         self::assertSame(0, $status);
         self::assertStringContainsString('ERROR safe', $output);
         self::assertStringNotContainsString('needle-secret', $output);
@@ -60,20 +76,20 @@ final class ConsoleTest extends TestCase
 
     public function testMissingLogAndInvalidMigrationOptionsFail(): void
     {
-        [$status] = $this->run('logs:tail');
+        [$status] = $this->runConsole('logs:tail');
         self::assertSame(1, $status);
-        [$status, $output] = $this->run('migrate', '--rollback', '--fresh');
+        [$status, $output] = $this->runConsole('migrate', '--rollback', '--fresh');
         self::assertSame(1, $status);
         self::assertStringContainsString('at most one', $output);
     }
 
     /** @return array{int, string} */
-    private function run(string ...$arguments): array
+    private function runConsole(string ...$arguments): array
     {
         $command = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(dirname(__DIR__, 3) . '/bin/phpenalva');
         foreach ($arguments as $argument) $command .= ' ' . escapeshellarg($argument);
         $pipes = [];
-        $process = proc_open($command, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, null, ['PHPENALVA_ROOT' => $this->root]);
+        $process = proc_open($command, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, null, array_merge(getenv() ?: [], ['PHPENALVA_ROOT' => $this->root]));
         self::assertIsResource($process);
         $output = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
         fclose($pipes[1]);
