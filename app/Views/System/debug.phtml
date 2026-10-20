@@ -1,0 +1,11 @@
+<section class="py-4">
+    <h1>Debug panel</h1>
+    <h2>Current request</h2>
+    <pre><?php echo htmlspecialchars(var_export($this->view->requestDetails, true), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></pre>
+    <h2>Timeline</h2>
+    <pre><!--DEBUG_TIMELINE--></pre>
+    <h2>Queries</h2>
+    <pre><?php echo htmlspecialchars(var_export($this->view->queries, true), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></pre>
+    <h2>Latest structured logs</h2>
+    <pre><?php echo htmlspecialchars(var_export($this->view->debugEntries, true), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></pre>
+</section>

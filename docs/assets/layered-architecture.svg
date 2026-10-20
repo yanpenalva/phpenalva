@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="310" viewBox="0 0 920 310" role="img" aria-labelledby="title desc">
+  <title id="title">Layered architecture</title>
+  <desc id="desc">HTTP and application layers depend inward on the domain; infrastructure implements domain contracts.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#526579"/></marker>
+    <style>text{font-family:Arial,sans-serif;fill:#203247}.label{font-size:19px;font-weight:700}.small{font-size:14px;fill:#42566b}.box{stroke:#7890a8;stroke-width:2;rx:12}</style>
+  </defs>
+  <rect width="920" height="310" rx="18" fill="#f5f8fc"/>
+  <text x="460" y="36" text-anchor="middle" class="label">Dependency direction</text>
+  <rect x="40" y="82" width="170" height="98" class="box" fill="#e4f1ff"/><text x="125" y="122" text-anchor="middle" class="label">HTTP</text><text x="125" y="148" text-anchor="middle" class="small">Routes · guards · controllers</text>
+  <rect x="270" y="82" width="170" height="98" class="box" fill="#e7f5ee"/><text x="355" y="122" text-anchor="middle" class="label">Application</text><text x="355" y="148" text-anchor="middle" class="small">Use cases</text>
+  <rect x="500" y="82" width="170" height="98" class="box" fill="#fff2d8"/><text x="585" y="122" text-anchor="middle" class="label">Domain</text><text x="585" y="148" text-anchor="middle" class="small">Rules · entities · contracts</text>
+  <rect x="730" y="82" width="150" height="98" class="box" fill="#f0eafe"/><text x="805" y="122" text-anchor="middle" class="label">Infrastructure</text><text x="805" y="148" text-anchor="middle" class="small">PDO adapters</text>
+  <path d="M270 131H220" stroke="#526579" stroke-width="3" marker-end="url(#arrow)"/><path d="M500 131H450" stroke="#526579" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M730 131H680" stroke="#526579" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="460" y="225" text-anchor="middle" class="small">Infrastructure implements repository contracts defined by the domain.</text>
+  <text x="460" y="251" text-anchor="middle" class="small">The domain does not depend on HTTP, Core, sessions, or PDO.</text>
+</svg>

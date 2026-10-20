@@ -1,30 +1,40 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Core;
+
+use PDO;
+use function array_keys;
+use function array_map;
+use function implode;
+use function sprintf;
 
 abstract class BaseModel
 {
-    protected $pdo;
-    protected $table;
-    protected $connection;
+    protected PDO $pdo;
 
-    public function __construct(\PDO $pdo)
+    /** @var string */
+    protected $table = '';
+
+    protected ?BaseDatabase $connection = null;
+
+    public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
-        $this->connection = new BaseDatabase();
     }
 
-    public function getModel($model)
+    public function getModel(string $model): BaseModel
     {
-        $objModel = '\\App\\Models\\'.$model;
+        $objModel = sprintf('\\App\\Models\\%s', $model);
+        $this->connection ??= new BaseDatabase();
 
         return new $objModel($this->connection->getDatabase());
     }
 
-    public function getAll()
+    public function getAll(): array
     {
-        $query = "SELECT * FROM {$this->table}";
-        $stmt = $this->pdo->prepare($query);
+        $stmt = $this->pdo->prepare(sprintf('SELECT * FROM %s', $this->table));
         $stmt->execute();
         $result = $stmt->fetchAll();
         $stmt->closeCursor();
@@ -32,10 +42,9 @@ abstract class BaseModel
         return $result;
     }
 
-    public function getById($id)
+    public function getById(int|string $id): mixed
     {
-        $query = "SELECT * FROM {$this->table} WHERE id = :id";
-        $stmt = $this->pdo->prepare($query);
+        $stmt = $this->pdo->prepare(sprintf('SELECT * FROM %s WHERE id = :id', $this->table));
         $stmt->bindValue(':id', $id);
         $stmt->execute();
         $result = $stmt->fetch();
@@ -44,52 +53,58 @@ abstract class BaseModel
         return $result;
     }
 
-    public function save($data)
+    public function save(array $data): string
     {
-        try {
-            $query = "INSERT INTO {$this->table} (description) VALUES (:description)";
-            $stmt = $this->pdo->prepare($query);
-            $stmt->bindValue(':description', $data['description']);
-            $stmt->execute();
-            $result = $this->pdo->lastInsertId();
-            $stmt->closeCursor();
+        $columns = implode(', ', array_keys($data));
+        $placeholders = sprintf(':%s', implode(', :', array_keys($data)));
+        $stmt = $this->pdo->prepare(sprintf('INSERT INTO %s (%s) VALUES (%s)', $this->table, $columns, $placeholders));
 
-            return $result;
-        } catch (\PDOException $e) {
-            return $e->getMessage();
+        foreach ($data as $key => $value) {
+            $stmt->bindValue(sprintf(':%s', $key), $value);
         }
+
+        $stmt->execute();
+        $insertId = (string) $this->pdo->lastInsertId();
+        $stmt->closeCursor();
+
+        return $insertId;
     }
 
-    public function update($data)
+    public function update(array $data): int
     {
-        try {
-            $query = "UPDATE {$this->table} SET description = :description WHERE id = :id";
-            $stmt = $this->pdo->prepare($query);
-            $stmt->bindValue(':description', $data['description']);
-            $stmt->bindValue(':id', $data['id']);
-            $stmt->execute();
-            $result = $stmt->rowCount();
-            $stmt->closeCursor();
+        $setClause = implode(', ', array_map(static fn (string $key): string => sprintf('%s = :%s', $key, $key), array_keys($data)));
+        $stmt = $this->pdo->prepare(sprintf('UPDATE %s SET %s WHERE id = :id', $this->table, $setClause));
 
-            return $result;
-        } catch (\PDOException $e) {
-            return $e->getMessage();
+        foreach ($data as $key => $value) {
+            $stmt->bindValue(sprintf(':%s', $key), $value);
         }
+
+        $stmt->execute();
+        $affected = $stmt->rowCount();
+        $stmt->closeCursor();
+
+        return $affected;
     }
 
-    public function delete($id)
+    public function exists(int|string $id): bool
     {
-        try {
-            $query = "DELETE FROM {$this->table} WHERE id = :id";
-            $stmt = $this->pdo->prepare($query);
-            $stmt->bindValue(':id', $id);
-            $stmt->execute();
-            $result = $stmt->rowCount();
-            $stmt->closeCursor();
+        $stmt = $this->pdo->prepare(sprintf('SELECT COUNT(*) FROM %s WHERE id = :id', $this->table));
+        $stmt->bindValue(':id', $id);
+        $stmt->execute();
+        $count = $stmt->fetchColumn();
+        $stmt->closeCursor();
 
-            return $result;
-        } catch (\PDOException $e) {
-            return $e->getMessage();
-        }
+        return $count > 0;
+    }
+
+    public function delete(int|string $id): int
+    {
+        $stmt = $this->pdo->prepare(sprintf('DELETE FROM %s WHERE id = :id', $this->table));
+        $stmt->bindValue(':id', $id);
+        $stmt->execute();
+        $affected = $stmt->rowCount();
+        $stmt->closeCursor();
+
+        return $affected;
     }
 }

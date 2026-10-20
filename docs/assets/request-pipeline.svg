@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="210" viewBox="0 0 960 210" role="img" aria-labelledby="title desc">
+  <title id="title">HTTP request pipeline</title>
+  <desc id="desc">Request passes through route matching, authentication and request guards, controller, use case, repository, then returns as a response.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#526579"/></marker>
+    <style>text{font-family:Arial,sans-serif;fill:#203247}.label{font-size:15px;font-weight:700}.box{stroke:#7890a8;stroke-width:2;rx:10}</style>
+  </defs>
+  <rect width="960" height="210" rx="18" fill="#f5f8fc"/>
+  <g text-anchor="middle">
+    <rect x="20" y="72" width="110" height="62" class="box" fill="#e4f1ff"/><text x="75" y="109" class="label">HTTP request</text>
+    <rect x="158" y="72" width="110" height="62" class="box" fill="#e4f1ff"/><text x="213" y="109" class="label">Routes</text>
+    <rect x="296" y="72" width="130" height="62" class="box" fill="#fff2d8"/><text x="361" y="97" class="label">Auth + request</text><text x="361" y="117" class="label">guards</text>
+    <rect x="454" y="72" width="110" height="62" class="box" fill="#e7f5ee"/><text x="509" y="109" class="label">Controller</text>
+    <rect x="592" y="72" width="110" height="62" class="box" fill="#e7f5ee"/><text x="647" y="109" class="label">Use case</text>
+    <rect x="730" y="72" width="110" height="62" class="box" fill="#f0eafe"/><text x="785" y="109" class="label">Repository</text>
+    <rect x="868" y="72" width="72" height="62" class="box" fill="#e4f1ff"/><text x="904" y="98" class="label">HTTP</text><text x="904" y="117" class="label">response</text>
+  </g>
+  <g stroke="#526579" stroke-width="2.5" marker-end="url(#arrow)"><path d="M130 103H150"/><path d="M268 103H288"/><path d="M426 103H446"/><path d="M564 103H584"/><path d="M702 103H722"/><path d="M840 103H860"/></g>
+  <text x="480" y="174" text-anchor="middle" style="font-family:Arial,sans-serif;font-size:13px;fill:#42566b">Guard failures return an HTTP error before the use case executes.</text>
+</svg>

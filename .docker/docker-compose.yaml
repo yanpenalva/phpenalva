@@ -1,0 +1,20 @@
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile 
+    container_name: phpenalva-app
+    volumes:
+      - ../:/var/www/html
+
+  web:
+    image: nginx:latest
+    container_name: phpenalva-nginx
+    ports:
+      - "8081:80"
+    volumes:
+      - ../:/var/www/html
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf  
+    depends_on:
+      - app

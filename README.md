@@ -1,37 +1,76 @@
-# PHPenalva a lightweight PHP micro-framework 𓅓
-![logomarca](public/assets/images/logomarca.png)
-### Overview
-PHPenalva is a lightweight PHP micro-framework designed on the Model-View-Controller (MVC) architecture.<br>
-Built with simplicity in mind, PHPenalva empowers you to swiftly create APIs and web applications.<br>
+# PHPenalva
 
-<strong>Note</strong>: This project is currently under construction. Please bear with us as we work to make it even better.
+PHPenalva is a PHP application framework organized around HTTP entry points, bounded contexts, and PDO persistence. This README is a navigation hub; implementation detail belongs in the linked guides.
 
-### Requirements
-PHP Version: PHP 7.4 or higher is required.<br>
-Web Server: You'll need a web server with URL rewriting enabled.<br>
-Supported Servers: PHPenalva plays nicely with Apache, Nginx, and IIS.<br>
-Database Compatibility: PHPenalva is compatible with MySQL, MariaDB, PostgreSQL, and SQLite.<br>
+## Table of Contents
 
-Platform: PHPenalva can be used on Linux, Windows, and macOS.<br>
+- [Quickstart](#quickstart)
+- [Usage Recipes](#usage-recipes)
+- [Testing](#testing)
+- [Architecture](#architecture)
+- [Installation](#installation)
+- [Best Practices](#best-practices)
+- [Conventions](#conventions)
+- [Showcase](#showcase)
+- [Modules](#modules)
 
+## Quickstart
 
-### Installation
-Getting started with PHPenalva is a breeze. <br>
-You can install it via Composer with the following command in your project directory:<br>
-`composer require phpenalva/phpenalva`
+Clone, install, migrate, serve, and complete a register-login-post cycle in about five minutes. Every command was executed against a fresh clone.
 
-### Routes Example
-<p>Here are some example routes that you can define in your PHPenalva application:</p>
+**Full guide:** [docs/00-quickstart.md](docs/00-quickstart.md)
 
-<strong>Route with views:</strong>
+## Usage Recipes
 
-<strong>GET /posts:</strong> List all posts. Access it in your browser to view the posts.<br>
-<strong>GET /post/{id}:</strong> View details of a specific post. Replace {id} with the desired post ID in the URL <br>
-            
-<strong>Route without views:</strong><br>
+Executable workflows cover contexts, use cases, value objects, endpoints, repository adapters, and migrations.
+Each recipe names paths, commands, expected output, and verification.
 
-<strong>POST /post:</strong> Create a new post. Send a POST request to this route with the required parameters to create a new post.<br>
-<strong>PUT /post/{id}:</strong> Update an existing post. Send a PUT request to this route with the required parameters to update an existing post. Replace {id} with the desired post ID in the URL.<br>
-<strong>DELETE /post/{id}:</strong> Delete an existing post. Send a DELETE request to this
+**Full guide:** [docs/03-recipes.md](docs/03-recipes.md) · [Create context](docs/03-recipes.md#create-a-bounded-context) · [Add use case](docs/03-recipes.md#add-a-use-case) · [Add value object](docs/03-recipes.md#add-a-value-object) · [Expose endpoint](docs/03-recipes.md#expose-an-endpoint) · [Add repository adapter](docs/03-recipes.md#add-a-repository-adapter) · [Add table migration](docs/03-recipes.md#add-a-migration-for-a-new-table)
 
+## Testing
 
+Unit tests cover domain rules and adapters; feature tests exercise the HTTP contract and migration manager.
+The guide records the precise suite boundaries, commands, test patterns, and known coverage gaps.
+
+**Full guide:** [docs/04-testing.md](docs/04-testing.md)
+
+## Architecture
+
+Identity and Content are bounded contexts split into Domain, Application, and Infrastructure layers.
+Core provides shared HTTP, session, database, and migration facilities.
+
+**Full guide:** [docs/02-architecture.md](docs/02-architecture.md) · [Identity module](docs/modules/identity.md) · [Content module](docs/modules/content.md)
+
+## Installation
+
+Install Composer dependencies, configure the PDO driver through `.env`, and apply registered migrations.
+The Docker Compose development server is exposed on port 8081.
+
+**Full guide:** [docs/01-installation.md](docs/01-installation.md)
+
+## Best Practices
+
+Keep domain and application rules independent of HTTP and SQL; compose adapters in bootstrap and keep controllers thin.
+Use parameterized SQL, preserve the JSON response contract, and arrange backups before destructive rollback.
+
+**Full guide:** [Best practices](docs/02-architecture.md#dependency-rules) · [Migration safety](docs/01-installation.md#migrations)
+
+## Conventions
+
+PHP files use strict types and explicit types; behavior changes require focused tests.
+Commit messages use the Conventional Commit form `<type>: <description>`.
+
+**Full guide:** [Code and commit conventions](docs/02-architecture.md#project-conventions)
+
+## Showcase
+
+The framework ships with a ready-made web showcase. The landing page at `/`
+presents the project with features, a quickstart, and documentation links. All
+pages share one layout with navigation and footer; Posts, Contact, and error
+pages follow the same visual system in `public/assets/css`. Every dynamic value
+is HTML-escaped; the debug panel stays behind `APP_DEBUG`.
+
+## Modules
+
+- [Identity](docs/modules/identity.md)
+- [Content](docs/modules/content.md)

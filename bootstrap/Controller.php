@@ -1,46 +1,85 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Bootstrap;
 
 use Core\BaseDatabase;
+use Exception;
+use function class_exists;
+use function is_array;
+use function file_exists;
+use function header;
+use function headers_sent;
+use function http_response_code;
+use function json_encode;
+use function sprintf;
+use function str_starts_with;
 
 class Controller
 {
-    protected $connection;
+    protected BaseDatabase $connection;
 
     public function __construct()
     {
         $this->connection = new BaseDatabase();
     }
 
-    public static function createController($controller, $dependency = null)
+    public static function createController(string $controller, mixed $dependency = null): object
     {
-        $controllerClass = 'App\\Controllers\\'.$controller;
+        $controllerClass = sprintf('App\\Controllers\\%s', $controller);
 
-        if (class_exists($controllerClass)) {
-            if ($dependency !== null) {
-                return new $controllerClass($dependency);
-            } else {
-                return new $controllerClass();
-            }
-        } else {
-            throw new \Exception("Controller not found: $controllerClass");
+        if (!class_exists($controllerClass)) {
+            throw new Exception(sprintf('Controller not found: %s', $controllerClass));
         }
+
+        return $dependency !== null ? new $controllerClass(...(is_array($dependency) ? $dependency : [$dependency])) : new $controllerClass();
     }
 
-    public function getModel($model)
+    public function getModel(string $model): object
     {
-        $objModel = '\\App\\Models\\'.$model;
+        $objModel = sprintf('\\App\\Models\\%s', $model);
 
         return new $objModel($this->connection->getDatabase());
     }
 
-    public static function pageNotFound()
+    public static function pageNotFound(): void
     {
-        if (file_exists(__DIR__.'/../app/Views/System/notFound.phtml')) {
-            return require_once __DIR__.'/../app/Views/System/notFound.phtml';
-        } else {
-            throw new \Exception('View path not found.', 404);
+        http_response_code(404);
+
+        if (self::isApiRequest()) {
+            self::renderNotFoundJson();
+
+            return;
         }
+
+        $viewPath = __DIR__ . '/../app/Views/System/notFound.phtml';
+
+        if (!file_exists($viewPath)) {
+            throw new Exception('View path not found.', 404);
+        }
+
+        require_once $viewPath;
+    }
+
+    private static function isApiRequest(): bool
+    {
+        $uri = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+
+        return str_starts_with($uri, '/api');
+    }
+
+    private static function renderNotFoundJson(): void
+    {
+        if (!headers_sent()) {
+            header('Content-Type: application/json');
+        }
+
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Not Found',
+            'data' => null,
+            'errors' => [],
+        ]);
     }
 }
