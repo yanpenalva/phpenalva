@@ -11,6 +11,7 @@ PHPenalva is a PHP application framework organized around HTTP entry points, bou
 - [Installation](#installation)
 - [Best Practices](#best-practices)
 - [Conventions](#conventions)
+- [Showcase](#showcase)
 - [Modules](#modules)
 
 ## Quickstart
@@ -60,6 +61,14 @@ PHP files use strict types and explicit types; behavior changes require focused 
 Commit messages use the Conventional Commit form `<type>: <description>`.
 
 **Full guide:** [Code and commit conventions](docs/02-architecture.md#project-conventions)
+
+## Showcase
+
+The framework ships with a ready-made web showcase. The landing page at `/`
+presents the project with features, a quickstart, and documentation links. All
+pages share one layout with navigation and footer; Posts, Contact, and error
+pages follow the same visual system in `public/assets/css`. Every dynamic value
+is HTML-escaped; the debug panel stays behind `APP_DEBUG`.
 
 ## Modules
 
